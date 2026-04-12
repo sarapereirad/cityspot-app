@@ -1,8 +1,21 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { ActivityIndicator, View } from "react-native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import AuthNavigator from "./AuthNavigator";
 import MainTabNavigator from "./MainTabNavigator";
+import SearchScreen from "../screens/main/SearchScreen";
 import { useAuth } from "../context/AuthContext";
+
+const Stack = createNativeStackNavigator();
+
+function MainStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Tabs" component={MainTabNavigator} />
+      <Stack.Screen name="Search" component={SearchScreen} />
+    </Stack.Navigator>
+  );
+}
 
 export default function AppNavigator() {
   const { user, initializing } = useAuth();
@@ -17,7 +30,7 @@ export default function AppNavigator() {
 
   return (
     <NavigationContainer>
-      {user ? <MainTabNavigator /> : <AuthNavigator />}
+      {user ? <MainStack /> : <AuthNavigator />}
     </NavigationContainer>
   );
 }
