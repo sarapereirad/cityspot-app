@@ -1,14 +1,285 @@
-import { StyleSheet, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import {
+  Alert,
+  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import { useAuth } from "../../context/AuthContext";
 
 export default function ProfileScreen() {
+  const { user, userProfile, logout, updateProfile } = useAuth();
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [photoUri, setPhotoUri] = useState("");
+
+  useEffect(() => {
+    if (userProfile) {
+      setFirstName(userProfile.firstName || "");
+      setLastName(userProfile.lastName || "");
+      setPhotoUri(userProfile.photoUri || "");
+    }
+  }, [userProfile]);
+
+  const handlePickImage = async () => {
+    try {
+      const permissionResult =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (!permissionResult.granted) {
+        Alert.alert(
+          "Permission required",
+          "You need to allow access to your gallery.",
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets?.length > 0) {
+        setPhotoUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to open gallery.");
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      await updateProfile({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        photoUri,
+      });
+
+      setIsEditing(false);
+      Alert.alert("Success", "Profile updated successfully.");
+    } catch (error) {
+      Alert.alert("Error", error.message);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      Alert.alert("Error", error.message);
+    }
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Profile Screen</Text>
+      <Text style={styles.title}>Profile</Text>
+
+      <View style={styles.card}>
+        <TouchableOpacity
+          style={styles.editIcon}
+          onPress={() => setIsEditing(!isEditing)}
+        >
+          <Ionicons name="create" size={22} color="#4F46E5" />
+        </TouchableOpacity>
+
+        <View style={styles.avatarWrapper}>
+          {photoUri ? (
+            <Image source={{ uri: photoUri }} style={styles.avatarImage} />
+          ) : (
+            <Ionicons name="person-circle" size={100} color="#CFCFD6" />
+          )}
+
+          {isEditing && (
+            <TouchableOpacity
+              style={styles.changePhotoButton}
+              onPress={handlePickImage}
+            >
+              <Text style={styles.changePhotoText}>Choose photo</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <View style={styles.fieldBlock}>
+          <Text style={styles.label}>Name :</Text>
+          {isEditing ? (
+            <TextInput
+              value={firstName}
+              onChangeText={setFirstName}
+              placeholder="Name to enter"
+              style={styles.input}
+            />
+          ) : (
+            <Text style={styles.value}>
+              {firstName?.trim() ? firstName : "Name to enter"}
+            </Text>
+          )}
+        </View>
+
+        <View style={styles.fieldBlock}>
+          <Text style={styles.label}>Surname :</Text>
+          {isEditing ? (
+            <TextInput
+              value={lastName}
+              onChangeText={setLastName}
+              placeholder="Surname to enter"
+              style={styles.input}
+            />
+          ) : (
+            <Text style={styles.value}>
+              {lastName?.trim() ? lastName : "Surname to enter"}
+            </Text>
+          )}
+        </View>
+
+        <View style={styles.fieldBlock}>
+          <Text style={styles.label}>Email :</Text>
+          <Text style={styles.value}>
+            {user?.email || userProfile?.email || ""}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.infoTitle}>Saved Places : 3</Text>
+
+        <Text style={[styles.infoTitle, { marginTop: 22 }]}>
+          Last searches :
+        </Text>
+        <Text style={styles.listText}>- Café</Text>
+        <Text style={styles.listText}>- Study</Text>
+        <Text style={styles.listText}>- Restaurant</Text>
+      </View>
+
+      {isEditing ? (
+        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+          <Text style={styles.buttonText}>Save</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.buttonText}>Log out</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", alignItems: "center" },
-  text: { fontSize: 20, fontWeight: "600" },
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+    paddingHorizontal: 20,
+    paddingTop: 60,
+  },
+  title: {
+    fontSize: 34,
+    fontWeight: "800",
+    color: "#111",
+    marginBottom: 18,
+  },
+  card: {
+    backgroundColor: "#ECECEC",
+    borderRadius: 24,
+    padding: 18,
+    marginBottom: 18,
+    position: "relative",
+  },
+  editIcon: {
+    position: "absolute",
+    right: 18,
+    top: 18,
+    zIndex: 10,
+  },
+  avatarWrapper: {
+    alignItems: "center",
+    marginBottom: 16,
+    marginTop: 6,
+  },
+  avatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+  changePhotoButton: {
+    marginTop: 10,
+    backgroundColor: "#D7D7DD",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 18,
+  },
+  changePhotoText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111",
+  },
+  fieldBlock: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 18,
+    flexWrap: "wrap",
+  },
+  label: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111",
+    marginRight: 6,
+  },
+  value: {
+    fontSize: 18,
+    color: "#111",
+  },
+  input: {
+    flex: 1,
+    minWidth: 180,
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "#D3D3D3",
+    fontSize: 16,
+  },
+  infoTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#111",
+  },
+  listText: {
+    fontSize: 18,
+    color: "#111",
+    marginTop: 6,
+  },
+  logoutButton: {
+    alignSelf: "center",
+    width: 180,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "#D7D7DD",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 6,
+  },
+  saveButton: {
+    alignSelf: "center",
+    width: 180,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "#4F46E5",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 6,
+  },
+  buttonText: {
+    color: "#111",
+    fontSize: 18,
+    fontWeight: "600",
+  },
 });

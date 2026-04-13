@@ -1,27 +1,42 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import {
   createUserWithEmailAndPassword,
+  onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
-  onAuthStateChanged,
 } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "../firebaseConfig";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
   const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (authenticatedUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (authenticatedUser) => {
       setUser(authenticatedUser);
-      if (initializing) setInitializing(false);
+
+      if (authenticatedUser) {
+        const userRef = doc(db, "users", authenticatedUser.uid);
+        const userSnap = await getDoc(userRef);
+
+        if (userSnap.exists()) {
+          setUserProfile(userSnap.data());
+        } else {
+          setUserProfile(null);
+        }
+      } else {
+        setUserProfile(null);
+      }
+
+      setInitializing(false);
     });
 
     return unsubscribe;
-  }, [initializing]);
+  }, []);
 
   const login = async (email, password) => {
     return await signInWithEmailAndPassword(auth, email, password);
@@ -36,8 +51,21 @@ export const AuthProvider = ({ children }) => {
 
     await setDoc(doc(db, "users", userCredential.user.uid), {
       email,
-      savedPlaces: [],
-      lastSearches: [],
+      firstName: "",
+      lastName: "",
+      photoUri: "",
+      savedPlaces: 3,
+      lastSearches: ["Café", "Study", "Restaurant"],
+      createdAt: new Date().toISOString(),
+    });
+
+    setUserProfile({
+      email,
+      firstName: "",
+      lastName: "",
+      photoUri: "",
+      savedPlaces: 3,
+      lastSearches: ["Café", "Study", "Restaurant"],
       createdAt: new Date().toISOString(),
     });
 
@@ -48,14 +76,35 @@ export const AuthProvider = ({ children }) => {
     return await signOut(auth);
   };
 
+  const updateProfile = async ({ firstName, lastName, photoUri }) => {
+    if (!user) return;
+
+    const userRef = doc(db, "users", user.uid);
+
+    const updatedData = {
+      firstName,
+      lastName,
+      photoUri: photoUri || "",
+    };
+
+    await updateDoc(userRef, updatedData);
+
+    setUserProfile((prev) => ({
+      ...prev,
+      ...updatedData,
+    }));
+  };
+
   return (
     <AuthContext.Provider
       value={{
         user,
+        userProfile,
         initializing,
         login,
         register,
         logout,
+        updateProfile,
       }}
     >
       {children}
