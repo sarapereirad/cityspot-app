@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -32,14 +31,13 @@ export default function DiscoverScreen({ navigation }) {
       const results = await fetchNearbyPlaces(
         userLocation.latitude,
         userLocation.longitude,
-        5000,
+        1500,
       );
 
       setNearbyPlaces(results);
     } catch (error) {
       setNearbyPlaces([]);
       setErrorMessage(error.message);
-      Alert.alert("Error", error.message);
     } finally {
       setLoading(false);
     }
@@ -75,7 +73,7 @@ export default function DiscoverScreen({ navigation }) {
           <Text style={styles.feedbackText}>{errorMessage}</Text>
         ) : nearbyPlaces.length === 0 ? (
           <Text style={styles.feedbackText}>
-            No nearby places found within 5km.
+            No nearby places found nearby.
           </Text>
         ) : (
           <ScrollView

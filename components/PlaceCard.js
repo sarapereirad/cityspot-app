@@ -10,12 +10,18 @@ export default function PlaceCard({ place, onPress, onFavoritePress }) {
         <Text style={styles.name} numberOfLines={1}>
           {place.name}
         </Text>
-        {place.address ? <Text style={styles.text}>{place.address}</Text> : null}
-        {place.distance ? <Text style={styles.text}>{place.distance}</Text> : null}
+        {place.address ? (
+          <Text style={styles.text}>{place.address}</Text>
+        ) : null}
+        {place.distance ? (
+          <Text style={styles.text}>{place.distance}</Text>
+        ) : null}
         {place.category ? (
           <Text style={styles.text}>Category : {place.category}</Text>
         ) : null}
-        {place.hours ? <Text style={styles.text}>{place.hours}</Text> : null}
+        <Text style={styles.smallText}>
+          {place.hours || "Hours not available"}
+        </Text>
       </View>
 
       <TouchableOpacity style={styles.favoriteBtn} onPress={onFavoritePress}>
