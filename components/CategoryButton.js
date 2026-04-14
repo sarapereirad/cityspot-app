@@ -1,13 +1,13 @@
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
-export default function CategoryButton({ label, icon, onPress }) {
+export default function CategoryButton(props) {
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress}>
+    <TouchableOpacity style={styles.container} onPress={props.onPress}>
       <View style={styles.iconCircle}>
-        <Ionicons name={icon} size={22} color="#111" />
+        <Ionicons name={props.icon} size={22} color="#111" />
       </View>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.label}>{props.label}</Text>
     </TouchableOpacity>
   );
 }

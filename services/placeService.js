@@ -2,7 +2,7 @@ const categoryImages = {
   cafe: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=800&q=80",
   restaurant:
     "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
-  library:
+  study:
     "https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80",
   outdoor:
     "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80",
@@ -10,228 +10,189 @@ const categoryImages = {
     "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80",
 };
 
-const overpassEndpoints = [
-  "https://overpass-api.de/api/interpreter",
-  "https://overpass.kumi.systems/api/interpreter",
-];
+const toRadians = (degrees) => {
+  return degrees * (Math.PI / 180);
+};
 
-const normalizeCategory = (category = "") =>
-  category
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-
-const toRadians = (degrees) => degrees * (Math.PI / 180);
-
-const getDistanceInMeters = (startLat, startLng, endLat, endLng) => {
+const getDistanceInMeters = (lat1, lon1, lat2, lon2) => {
   const earthRadius = 6371000;
-  const deltaLat = toRadians(endLat - startLat);
-  const deltaLng = toRadians(endLng - startLng);
-  const lat1 = toRadians(startLat);
-  const lat2 = toRadians(endLat);
+  const dLat = toRadians(lat2 - lat1);
+  const dLon = toRadians(lon2 - lon1);
 
   const a =
-    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
-    Math.cos(lat1) *
-      Math.cos(lat2) *
-      Math.sin(deltaLng / 2) *
-      Math.sin(deltaLng / 2);
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRadians(lat1)) *
+      Math.cos(toRadians(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
   return Math.round(earthRadius * c);
 };
 
 const formatDistance = (meters) => {
-  if (meters < 1000) return `${meters}m away`;
-  return `${(meters / 1000).toFixed(1)}km away`;
+  if (meters < 1000) {
+    return meters + "m away";
+  }
+
+  return (meters / 1000).toFixed(1) + "km away";
 };
 
-const formatAddress = (tags = {}) => {
-  const houseNumber = tags["addr:housenumber"]?.trim();
-  const street = tags["addr:street"]?.trim();
+const formatAddress = (tags) => {
+  const street = tags["addr:street"];
+  const number = tags["addr:housenumber"];
 
-  if (street && houseNumber) return `${street} ${houseNumber}`;
-  if (street) return street;
+  if (street && number) {
+    return street + " " + number;
+  }
+
+  if (street) {
+    return street;
+  }
+
   return "";
 };
 
-const getPlaceCategory = (tags = {}) => {
-  const amenity = tags.amenity;
-  const leisure = tags.leisure;
+const getCategoryName = (tags) => {
+  if (tags.leisure === "park") {
+    return "Outdoor";
+  }
 
-  if (leisure === "park") return "Outdoor";
-  if (["bar", "cafe", "pub"].includes(amenity)) return "Café";
-  if (["restaurant", "fast_food", "food_court"].includes(amenity))
+  if (
+    tags.amenity === "cafe" ||
+    tags.amenity === "bar" ||
+    tags.amenity === "pub"
+  ) {
+    return "Café";
+  }
+
+  if (
+    tags.amenity === "restaurant" ||
+    tags.amenity === "fast_food" ||
+    tags.amenity === "food_court"
+  ) {
     return "Restaurant";
-  if (["library", "coworking_space"].includes(amenity)) return "Study";
+  }
+
+  if (tags.amenity === "library" || tags.amenity === "coworking_space") {
+    return "Study";
+  }
+
   return "Outdoor";
 };
 
-const getImageForTags = (tags = {}) => {
-  const amenity = tags.amenity;
-  const leisure = tags.leisure;
+const getCategoryImage = (tags) => {
+  if (tags.leisure === "park") {
+    return categoryImages.outdoor;
+  }
 
-  if (leisure === "park") return categoryImages.outdoor;
-  if (["bar", "cafe", "pub"].includes(amenity)) return categoryImages.cafe;
-  if (["restaurant", "fast_food", "food_court"].includes(amenity))
+  if (
+    tags.amenity === "cafe" ||
+    tags.amenity === "bar" ||
+    tags.amenity === "pub"
+  ) {
+    return categoryImages.cafe;
+  }
+
+  if (
+    tags.amenity === "restaurant" ||
+    tags.amenity === "fast_food" ||
+    tags.amenity === "food_court"
+  ) {
     return categoryImages.restaurant;
-  if (["library", "coworking_space"].includes(amenity))
-    return categoryImages.library;
+  }
+
+  if (tags.amenity === "library" || tags.amenity === "coworking_space") {
+    return categoryImages.study;
+  }
+
   return categoryImages.default;
 };
 
-const getCategoryFilters = (category) => {
-  const normalized = normalizeCategory(category);
-
-  if (normalized.includes("restaurant")) {
-    return ['["amenity"~"restaurant|fast_food|food_court"]'];
+const getCategoryFilter = (category) => {
+  if (category === "Restaurant") {
+    return '["amenity"~"restaurant|fast_food|food_court"]';
   }
 
-  if (normalized.includes("study")) {
-    return ['["amenity"~"library|coworking_space"]'];
+  if (category === "Study") {
+    return '["amenity"~"library|coworking_space"]';
   }
 
-  if (normalized.includes("caf")) {
-    return ['["amenity"~"bar|cafe|pub"]'];
+  if (category === "Café") {
+    return '["amenity"~"bar|cafe|pub"]';
   }
 
-  return ['["leisure"="park"]'];
+  return '["leisure"="park"]';
 };
 
-const fetchOverpass = async (query) => {
-  let lastError = null;
+const fetchOverpassData = async (query) => {
+  const response = await fetch("https://overpass-api.de/api/interpreter", {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain",
+    },
+    body: query,
+  });
 
-  for (const endpoint of overpassEndpoints) {
-    try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "text/plain",
-        },
-        body: query,
-      });
-
-      if (!response.ok) {
-        const message =
-          response.status === 504
-            ? "Overpass is taking too long to answer. Try again in a moment."
-            : `Overpass error: ${response.status}`;
-        lastError = new Error(message);
-        continue;
-      }
-
-      return await response.json();
-    } catch (error) {
-      lastError = error;
-    }
+  if (!response.ok) {
+    throw new Error("Error in fetch");
   }
 
-  throw lastError || new Error("Failed to fetch places from Overpass.");
-};
-
-const buildQuery = ({ latitude, longitude, radius, filters, limit = 60 }) => `
-[out:json][timeout:20];
-(
-  ${filters
-    .flatMap((filter) => [
-      `node${filter}(around:${radius},${latitude},${longitude});`,
-      `way${filter}(around:${radius},${latitude},${longitude});`,
-    ])
-    .join("\n  ")}
-);
-out tags center ${limit};
-`;
-
-const mapNearbyPlaces = (elements, latitude, longitude, maxResults = 10) => {
-  return elements
-    .map((item) => {
-      const lat = item.lat || item.center?.lat;
-      const lng = item.lon || item.center?.lon;
-      const name = item.tags?.name?.trim();
-      const address = formatAddress(item.tags);
-      const hours = item.tags?.opening_hours?.trim() || "";
-
-      if (!lat || !lng) return null;
-      if (!name || name.toLowerCase() === "unnamed") return null;
-      if (!address) return null;
-
-      const distanceInMeters = getDistanceInMeters(
-        latitude,
-        longitude,
-        lat,
-        lng,
-      );
-
-      return {
-        id: `${item.type}-${item.id}`,
-        name,
-        address,
-        distance: formatDistance(distanceInMeters),
-        distanceInMeters,
-        category: getPlaceCategory(item.tags),
-        hours,
-        image: getImageForTags(item.tags),
-        lat,
-        lng,
-      };
-    })
-    .filter(Boolean)
-    .sort((a, b) => a.distanceInMeters - b.distanceInMeters)
-    .slice(0, maxResults);
-};
-
-const mapCategoryPlaces = (elements, latitude, longitude, maxResults = 50) => {
-  return elements
-    .map((item) => {
-      const lat = item.lat || item.center?.lat;
-      const lng = item.lon || item.center?.lon;
-      const name = item.tags?.name?.trim();
-      const address = formatAddress(item.tags);
-      const hours = item.tags?.opening_hours?.trim() || "";
-
-      if (!lat || !lng) return null;
-      if (!name || name.toLowerCase() === "unnamed") return null;
-      if (!address) return null;
-
-      const distanceInMeters = getDistanceInMeters(
-        latitude,
-        longitude,
-        lat,
-        lng,
-      );
-
-      return {
-        id: `${item.type}-${item.id}`,
-        name,
-        address,
-        distance: formatDistance(distanceInMeters),
-        distanceInMeters,
-        category: getPlaceCategory(item.tags),
-        hours,
-        image: getImageForTags(item.tags),
-        lat,
-        lng,
-      };
-    })
-    .filter(Boolean)
-    .sort((a, b) => a.distanceInMeters - b.distanceInMeters)
-    .slice(0, maxResults);
+  return await response.json();
 };
 
 export const fetchNearbyPlaces = async (latitude, longitude, radius = 1000) => {
-  const query = buildQuery({
-    latitude,
-    longitude,
-    radius,
-    filters: [
-      '["amenity"~"bar|cafe|pub|restaurant|fast_food|food_court|library|coworking_space"]',
-      '["leisure"="park"]',
-    ],
-    limit: 50,
-  });
+  const query = `
+    [out:json][timeout:20];
+    (
+      node["amenity"~"bar|cafe|pub|restaurant|fast_food|food_court|library|coworking_space"](around:${radius},${latitude},${longitude});
+      way["amenity"~"bar|cafe|pub|restaurant|fast_food|food_court|library|coworking_space"](around:${radius},${latitude},${longitude});
+      node["leisure"="park"](around:${radius},${latitude},${longitude});
+      way["leisure"="park"](around:${radius},${latitude},${longitude});
+    );
+    out tags center 50;
+  `;
 
-  const data = await fetchOverpass(query);
-  return mapNearbyPlaces(data.elements || [], latitude, longitude, 10);
+  const data = await fetchOverpassData(query);
+
+  const places = data.elements
+    .map((item) => {
+      const lat = item.lat || item.center?.lat;
+      const lng = item.lon || item.center?.lon;
+      const name = item.tags?.name?.trim();
+      const address = formatAddress(item.tags || {});
+      const hours = item.tags?.opening_hours?.trim() || "";
+
+      if (!lat || !lng) return null;
+      if (!name || name.toLowerCase() === "unnamed") return null;
+      if (!address) return null;
+
+      const distanceInMeters = getDistanceInMeters(
+        latitude,
+        longitude,
+        lat,
+        lng,
+      );
+
+      return {
+        id: item.id.toString(),
+        name: name,
+        address: address,
+        distance: formatDistance(distanceInMeters),
+        distanceInMeters: distanceInMeters,
+        category: getCategoryName(item.tags || {}),
+        hours: hours,
+        image: getCategoryImage(item.tags || {}),
+        lat: lat,
+        lng: lng,
+      };
+    })
+    .filter((item) => item !== null)
+    .sort((a, b) => a.distanceInMeters - b.distanceInMeters)
+    .slice(0, 10);
+
+  return places;
 };
 
 export const fetchPlacesByCategoryNearby = async ({
@@ -240,14 +201,53 @@ export const fetchPlacesByCategoryNearby = async ({
   longitude,
   radius = 5000,
 }) => {
-  const query = buildQuery({
-    latitude,
-    longitude,
-    radius,
-    filters: getCategoryFilters(category),
-    limit: 120,
-  });
+  const filter = getCategoryFilter(category);
 
-  const data = await fetchOverpass(query);
-  return mapCategoryPlaces(data.elements || [], latitude, longitude, 50);
+  const query = `
+    [out:json][timeout:20];
+    (
+      node${filter}(around:${radius},${latitude},${longitude});
+      way${filter}(around:${radius},${latitude},${longitude});
+    );
+    out tags center 120;
+  `;
+
+  const data = await fetchOverpassData(query);
+
+  const places = data.elements
+    .map((item) => {
+      const lat = item.lat || item.center?.lat;
+      const lng = item.lon || item.center?.lon;
+      const name = item.tags?.name?.trim();
+      const address = formatAddress(item.tags || {});
+      const hours = item.tags?.opening_hours?.trim() || "";
+
+      if (!lat || !lng) return null;
+      if (!name || name.toLowerCase() === "unnamed") return null;
+      if (!address) return null;
+
+      const distanceInMeters = getDistanceInMeters(
+        latitude,
+        longitude,
+        lat,
+        lng,
+      );
+
+      return {
+        id: item.id.toString(),
+        name: name,
+        address: address,
+        distance: formatDistance(distanceInMeters),
+        distanceInMeters: distanceInMeters,
+        category: getCategoryName(item.tags || {}),
+        hours: hours,
+        image: getCategoryImage(item.tags || {}),
+        lat: lat,
+        lng: lng,
+      };
+    })
+    .filter((item) => item !== null)
+    .sort((a, b) => a.distanceInMeters - b.distanceInMeters);
+
+  return places;
 };

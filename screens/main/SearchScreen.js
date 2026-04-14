@@ -8,14 +8,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import PlaceCard from "../../components/PlaceCard";
 import { places } from "../../data/places";
 import { getUserLocation } from "../../services/locationService";
 import { fetchPlacesByCategoryNearby } from "../../services/placeService";
 
-export default function SearchScreen({ navigation, route }) {
-  const initialCategory = route.params?.category || "";
+export default function SearchScreen(props) {
+  const initialCategory = props.route.params?.category || "";
   const [searchText, setSearchText] = useState(initialCategory);
   const [allPlaces, setAllPlaces] = useState(places);
   const [filteredPlaces, setFilteredPlaces] = useState(places);
@@ -25,12 +25,11 @@ export default function SearchScreen({ navigation, route }) {
   useEffect(() => {
     if (initialCategory.trim()) {
       loadCategoryPlaces(initialCategory);
-      return;
+    } else {
+      setAllPlaces(places);
+      setFilteredPlaces(places);
+      setSearchText("");
     }
-
-    setAllPlaces(places);
-    setFilteredPlaces(places);
-    setSearchText("");
   }, [initialCategory]);
 
   const loadCategoryPlaces = async (category) => {
@@ -39,20 +38,25 @@ export default function SearchScreen({ navigation, route }) {
       setErrorMessage("");
       setSearchText(category);
 
-      const userLocation = await getUserLocation();
-      const results = await fetchPlacesByCategoryNearby({
-        category,
-        latitude: userLocation.latitude,
-        longitude: userLocation.longitude,
+      const location = await getUserLocation();
+
+      if (!location) {
+        Alert.alert("Permission denied", "Location is required.");
+        return;
+      }
+      const data = await fetchPlacesByCategoryNearby({
+        category: category,
+        latitude: location.latitude,
+        longitude: location.longitude,
         radius: 1500,
       });
 
-      setAllPlaces(results);
-      setFilteredPlaces(results);
+      setAllPlaces(data);
+      setFilteredPlaces(data);
     } catch (error) {
       setAllPlaces([]);
       setFilteredPlaces([]);
-      setErrorMessage(error.message);
+      setErrorMessage("Could not load places.");
     } finally {
       setLoading(false);
     }
@@ -68,10 +72,11 @@ export default function SearchScreen({ navigation, route }) {
 
     const filtered = allPlaces.filter((place) => {
       const value = text.toLowerCase();
+
       return (
         place.name.toLowerCase().includes(value) ||
-        place.category?.toLowerCase().includes(value) ||
-        place.address?.toLowerCase().includes(value)
+        (place.category && place.category.toLowerCase().includes(value)) ||
+        (place.address && place.address.toLowerCase().includes(value))
       );
     });
 
@@ -83,7 +88,7 @@ export default function SearchScreen({ navigation, route }) {
       <View style={styles.topRow}>
         <TouchableOpacity
           style={styles.backBtn}
-          onPress={() => navigation.goBack()}
+          onPress={() => props.navigation.goBack()}
         >
           <Ionicons name="chevron-back" size={24} color="#fff" />
         </TouchableOpacity>

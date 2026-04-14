@@ -1,8 +1,8 @@
+// screens/auth/SignUpScreen.js
 import { useState } from "react";
-import { Image } from "react-native";
-
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -11,24 +11,22 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useAuth } from "../../context/AuthContext";
+import { registerUser } from "../../services/authService";
+
+const getAuthErrorMessage = (code) => {
+  switch (code) {
+    case "auth/email-already-in-use":
+      return "An account already exists with this email.";
+    case "auth/invalid-email":
+      return "The email address is not valid.";
+    case "auth/weak-password":
+      return "Password must be at least 6 characters.";
+    default:
+      return "Something went wrong. Please try again.";
+  }
+};
 
 export default function SignUpScreen({ navigation }) {
-  const { register } = useAuth();
-
-  const getAuthErrorMessage = (code) => {
-    switch (code) {
-      case "auth/email-already-in-use":
-        return "An account already exists with this email.";
-      case "auth/invalid-email":
-        return "The email address is not valid.";
-      case "auth/weak-password":
-        return "Password must be at least 6 characters.";
-      default:
-        return "Something went wrong. Please try again.";
-    }
-  };
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -39,7 +37,7 @@ export default function SignUpScreen({ navigation }) {
     }
 
     try {
-      await register(email.trim(), password);
+      await registerUser(email.trim(), password);
     } catch (error) {
       Alert.alert("Sign up failed", getAuthErrorMessage(error.code));
     }
@@ -86,10 +84,6 @@ export default function SignUpScreen({ navigation }) {
             <Text style={styles.link}> Sign in</Text>
           </TouchableOpacity>
         </View>
-
-        <Text style={styles.policyText}>
-          By continuing you agree to CitySpot’s Terms & Privacy Policy.
-        </Text>
       </View>
     </KeyboardAvoidingView>
   );
@@ -159,12 +153,5 @@ const styles = StyleSheet.create({
   link: {
     color: "#000",
     fontWeight: "700",
-  },
-  policyText: {
-    textAlign: "center",
-    color: "#AAA",
-    fontSize: 12,
-    marginTop: 20,
-    lineHeight: 18,
   },
 });

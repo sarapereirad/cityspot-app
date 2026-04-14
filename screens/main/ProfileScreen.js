@@ -8,74 +8,90 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImagePicker from "expo-image-picker";
-import { useAuth } from "../../context/AuthContext";
+import { auth } from "../../firebaseConfig";
+import {
+  getUserProfile,
+  logoutUser,
+  updateUserProfile,
+} from "../../services/authService";
 
 export default function ProfileScreen() {
-  const { user, userProfile, logout, updateProfile } = useAuth();
-
-  const [isEditing, setIsEditing] = useState(false);
+  const [profile, setProfile] = useState(null);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [photoUri, setPhotoUri] = useState("");
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
-    if (userProfile) {
-      setFirstName(userProfile.firstName || "");
-      setLastName(userProfile.lastName || "");
-      setPhotoUri(userProfile.photoUri || "");
-    }
-  }, [userProfile]);
+    loadProfile();
+  }, []);
 
-  const handlePickImage = async () => {
+  const loadProfile = async () => {
     try {
-      const permissionResult =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!auth.currentUser) return;
 
-      if (!permissionResult.granted) {
-        Alert.alert(
-          "Permission required",
-          "You need to allow access to your gallery.",
-        );
-        return;
-      }
+      const userData = await getUserProfile(auth.currentUser.uid);
+      setProfile(userData);
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets?.length > 0) {
-        setPhotoUri(result.assets[0].uri);
+      if (userData) {
+        setFirstName(userData.firstName || "");
+        setLastName(userData.lastName || "");
+        setPhotoUri(userData.photoUri || "");
       }
     } catch (error) {
-      Alert.alert("Error", "Failed to open gallery.");
+      Alert.alert("Error", "Could not load profile.");
+    }
+  };
+
+  const pickImage = async () => {
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permissionResult.granted) {
+      Alert.alert(
+        "Permission required",
+        "You need to allow access to gallery.",
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      setPhotoUri(result.assets[0].uri);
     }
   };
 
   const handleSave = async () => {
     try {
-      await updateProfile({
+      if (!auth.currentUser) return;
+
+      await updateUserProfile(auth.currentUser.uid, {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         photoUri,
       });
 
-      setIsEditing(false);
-      Alert.alert("Success", "Profile updated successfully.");
+      setEditing(false);
+      await loadProfile();
+      Alert.alert("Success", "Profile updated.");
     } catch (error) {
-      Alert.alert("Error", error.message);
+      Alert.alert("Error", "Could not save profile.");
     }
   };
 
   const handleLogout = async () => {
     try {
-      await logout();
+      await logoutUser();
     } catch (error) {
-      Alert.alert("Error", error.message);
+      Alert.alert("Error", "Could not log out.");
     }
   };
 
@@ -86,7 +102,7 @@ export default function ProfileScreen() {
       <View style={styles.card}>
         <TouchableOpacity
           style={styles.editIcon}
-          onPress={() => setIsEditing(!isEditing)}
+          onPress={() => setEditing(!editing)}
         >
           <Ionicons name="create" size={22} color="#4F46E5" />
         </TouchableOpacity>
@@ -98,60 +114,54 @@ export default function ProfileScreen() {
             <Ionicons name="person-circle" size={100} color="#CFCFD6" />
           )}
 
-          {isEditing && (
-            <TouchableOpacity
-              style={styles.changePhotoButton}
-              onPress={handlePickImage}
-            >
-              <Text style={styles.changePhotoText}>Choose photo</Text>
+          {editing && (
+            <TouchableOpacity style={styles.photoButton} onPress={pickImage}>
+              <Text style={styles.photoButtonText}>Choose photo</Text>
             </TouchableOpacity>
           )}
         </View>
 
-        <View style={styles.fieldBlock}>
+        <View style={styles.fieldRow}>
           <Text style={styles.label}>Name :</Text>
-          {isEditing ? (
+          {editing ? (
             <TextInput
+              style={styles.input}
+              placeholder="Name to enter"
               value={firstName}
               onChangeText={setFirstName}
-              placeholder="Name to enter"
-              style={styles.input}
             />
           ) : (
             <Text style={styles.value}>
-              {firstName?.trim() ? firstName : "Name to enter"}
+              {firstName ? firstName : "Name to enter"}
             </Text>
           )}
         </View>
 
-        <View style={styles.fieldBlock}>
+        <View style={styles.fieldRow}>
           <Text style={styles.label}>Surname :</Text>
-          {isEditing ? (
+          {editing ? (
             <TextInput
+              style={styles.input}
+              placeholder="Surname to enter"
               value={lastName}
               onChangeText={setLastName}
-              placeholder="Surname to enter"
-              style={styles.input}
             />
           ) : (
             <Text style={styles.value}>
-              {lastName?.trim() ? lastName : "Surname to enter"}
+              {lastName ? lastName : "Surname to enter"}
             </Text>
           )}
         </View>
 
-        <View style={styles.fieldBlock}>
+        <View style={styles.fieldRow}>
           <Text style={styles.label}>Email :</Text>
-          <Text style={styles.value}>
-            {user?.email || userProfile?.email || ""}
-          </Text>
+          <Text style={styles.value}>{auth.currentUser?.email}</Text>
         </View>
       </View>
 
       <View style={styles.card}>
         <Text style={styles.infoTitle}>Saved Places : 3</Text>
-
-        <Text style={[styles.infoTitle, { marginTop: 22 }]}>
+        <Text style={[styles.infoTitle, { marginTop: 20 }]}>
           Last searches :
         </Text>
         <Text style={styles.listText}>- Café</Text>
@@ -159,7 +169,7 @@ export default function ProfileScreen() {
         <Text style={styles.listText}>- Restaurant</Text>
       </View>
 
-      {isEditing ? (
+      {editing ? (
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.buttonText}>Save</Text>
         </TouchableOpacity>
@@ -208,19 +218,19 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
   },
-  changePhotoButton: {
+  photoButton: {
     marginTop: 10,
     backgroundColor: "#D7D7DD",
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 18,
+    borderRadius: 16,
   },
-  changePhotoText: {
+  photoButtonText: {
     fontSize: 14,
     fontWeight: "600",
     color: "#111",
   },
-  fieldBlock: {
+  fieldRow: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 18,

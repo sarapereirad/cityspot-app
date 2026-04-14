@@ -9,14 +9,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import CategoryButton from "../../components/CategoryButton";
 import { getUserLocation } from "../../services/locationService";
 import { fetchNearbyPlaces } from "../../services/placeService";
 
-export default function DiscoverScreen({ navigation }) {
+export default function DiscoverScreen(props) {
   const [nearbyPlaces, setNearbyPlaces] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
@@ -28,18 +28,23 @@ export default function DiscoverScreen({ navigation }) {
       setLoading(true);
       setErrorMessage("");
 
-      const userLocation = await getUserLocation();
-      const results = await fetchNearbyPlaces(
-        userLocation.latitude,
-        userLocation.longitude,
+      const location = await getUserLocation();
+
+      if (!location) {
+        Alert.alert("Permission denied", "Location is required.");
+        return;
+      }
+      const data = await fetchNearbyPlaces(
+        location.latitude,
+        location.longitude,
         1000,
       );
 
-      setNearbyPlaces(results);
+      setNearbyPlaces(data);
     } catch (error) {
       setNearbyPlaces([]);
-      setErrorMessage(error.message);
-      Alert.alert("Error", error.message);
+      setErrorMessage("Could not load nearby places.");
+      Alert.alert("Error", "Could not load nearby places.");
     } finally {
       setLoading(false);
     }
@@ -54,7 +59,7 @@ export default function DiscoverScreen({ navigation }) {
       <View style={styles.content}>
         <TouchableOpacity
           style={styles.searchBar}
-          onPress={() => navigation.navigate("Search")}
+          onPress={() => props.navigation.navigate("Search")}
         >
           <Ionicons name="search" size={20} color="#333" />
           <Text style={styles.searchPlaceholder}>
@@ -69,17 +74,17 @@ export default function DiscoverScreen({ navigation }) {
           <ActivityIndicator
             size="large"
             color="#4F46E5"
-            style={{ marginVertical: 20 }}
+            style={styles.loader}
           />
         ) : errorMessage ? (
           <Text style={styles.feedbackText}>{errorMessage}</Text>
         ) : nearbyPlaces.length === 0 ? (
           <Text style={styles.feedbackText}>
-            No nearby places found within 1km.
+            No nearby places found within 1 km.
           </Text>
         ) : (
           <ScrollView
-            horizontal
+            horizontal={true}
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.rowCards}
           >
@@ -87,7 +92,7 @@ export default function DiscoverScreen({ navigation }) {
               <TouchableOpacity
                 key={place.id}
                 style={styles.smallCard}
-                onPress={() => navigation.navigate("Search")}
+                onPress={() => props.navigation.navigate("Search")}
               >
                 <View style={styles.favoriteMini}>
                   <Ionicons name="heart" size={14} color="#000" />
@@ -101,12 +106,14 @@ export default function DiscoverScreen({ navigation }) {
                 <Text style={styles.smallTitle} numberOfLines={1}>
                   {place.name}
                 </Text>
+
                 {place.distance ? (
                   <Text style={styles.smallText}>{place.distance}</Text>
                 ) : null}
+
                 {place.category ? (
                   <Text style={styles.smallText}>
-                    Category : {place.category}
+                    Category: {place.category}
                   </Text>
                 ) : null}
               </TouchableOpacity>
@@ -116,29 +123,33 @@ export default function DiscoverScreen({ navigation }) {
 
         <Text style={styles.sectionTitle}>Categories</Text>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <ScrollView horizontal={true} showsHorizontalScrollIndicator={false}>
           <CategoryButton
             label="Restaurant"
             icon="restaurant"
             onPress={() =>
-              navigation.navigate("Search", { category: "Restaurant" })
+              props.navigation.navigate("Search", { category: "Restaurant" })
             }
           />
           <CategoryButton
             label="Study"
             icon="book"
-            onPress={() => navigation.navigate("Search", { category: "Study" })}
+            onPress={() =>
+              props.navigation.navigate("Search", { category: "Study" })
+            }
           />
           <CategoryButton
             label="Café"
             icon="cafe"
-            onPress={() => navigation.navigate("Search", { category: "Café" })}
+            onPress={() =>
+              props.navigation.navigate("Search", { category: "Café" })
+            }
           />
           <CategoryButton
             label="Outdoor"
             icon="leaf"
             onPress={() =>
-              navigation.navigate("Search", { category: "Outdoor" })
+              props.navigation.navigate("Search", { category: "Outdoor" })
             }
           />
         </ScrollView>
@@ -195,9 +206,11 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     marginTop: 10,
   },
+  loader: {
+    marginVertical: 20,
+  },
   rowCards: {
     flexDirection: "row",
-    gap: 12,
     marginBottom: 22,
   },
   smallCard: {
@@ -206,6 +219,7 @@ const styles = StyleSheet.create({
     padding: 10,
     width: 165,
     position: "relative",
+    marginRight: 12,
   },
   favoriteMini: {
     position: "absolute",

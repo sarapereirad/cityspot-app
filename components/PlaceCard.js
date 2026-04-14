@@ -1,30 +1,37 @@
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
-export default function PlaceCard({ place, onPress, onFavoritePress }) {
+export default function PlaceCard(props) {
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress}>
-      <Image source={{ uri: place.image }} style={styles.image} />
+    <TouchableOpacity style={styles.card} onPress={props.onPress}>
+      <Image source={{ uri: props.place.image }} style={styles.image} />
 
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>
-          {place.name}
+          {props.place.name}
         </Text>
-        {place.address ? (
-          <Text style={styles.text}>{place.address}</Text>
+
+        {props.place.address ? (
+          <Text style={styles.text}>{props.place.address}</Text>
         ) : null}
-        {place.distance ? (
-          <Text style={styles.text}>{place.distance}</Text>
+
+        {props.place.distance ? (
+          <Text style={styles.text}>{props.place.distance}</Text>
         ) : null}
-        {place.category ? (
-          <Text style={styles.text}>Category : {place.category}</Text>
+
+        {props.place.category ? (
+          <Text style={styles.text}>Category: {props.place.category}</Text>
         ) : null}
+
         <Text style={styles.smallText}>
-          {place.hours || "Hours not available"}
+          {props.place.hours ? props.place.hours : "Hours not available"}
         </Text>
       </View>
 
-      <TouchableOpacity style={styles.favoriteBtn} onPress={onFavoritePress}>
+      <TouchableOpacity
+        style={styles.favoriteBtn}
+        onPress={props.onFavoritePress}
+      >
         <Ionicons name="heart" size={20} color="#fff" />
       </TouchableOpacity>
     </TouchableOpacity>
@@ -61,6 +68,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#333",
     marginBottom: 2,
+  },
+  smallText: {
+    fontSize: 12,
+    color: "#555",
+    marginTop: 2,
   },
   favoriteBtn: {
     position: "absolute",

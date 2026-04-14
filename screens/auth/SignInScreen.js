@@ -1,10 +1,8 @@
+// screens/auth/SignInScreen.js
 import { useState } from "react";
-import { sendPasswordResetEmail } from "firebase/auth";
-import { auth } from "../../firebaseConfig";
-import { Image } from "react-native";
-
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -13,11 +11,26 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useAuth } from "../../context/AuthContext";
+import { sendPasswordResetEmail } from "firebase/auth";
+import { auth } from "../../firebaseConfig";
+import { loginUser } from "../../services/authService";
+
+const getAuthErrorMessage = (code) => {
+  switch (code) {
+    case "auth/invalid-email":
+      return "The email address is not valid.";
+    case "auth/user-not-found":
+      return "No account found with this email.";
+    case "auth/wrong-password":
+      return "Incorrect password.";
+    case "auth/invalid-credential":
+      return "The email or password is incorrect.";
+    default:
+      return "Something went wrong. Please try again.";
+  }
+};
 
 export default function SignInScreen({ navigation }) {
-  const { login } = useAuth();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -28,9 +41,9 @@ export default function SignInScreen({ navigation }) {
     }
 
     try {
-      await login(email.trim(), password);
+      await loginUser(email.trim(), password);
     } catch (error) {
-      Alert.alert("Sign in failed", error.message);
+      Alert.alert("Sign in failed", getAuthErrorMessage(error.code));
     }
   };
 
@@ -70,10 +83,6 @@ export default function SignInScreen({ navigation }) {
           style={styles.input}
         />
 
-        <Text style={styles.helperText}>
-          We’ll send a secure sign-in link to your email.
-        </Text>
-
         <TextInput
           placeholder="Enter password"
           placeholderTextColor="#999"
@@ -97,10 +106,6 @@ export default function SignInScreen({ navigation }) {
             <Text style={styles.link}> Sign up</Text>
           </TouchableOpacity>
         </View>
-
-        <Text style={styles.policyText}>
-          By continuing you agree to CitySpot’s Terms & Privacy Policy.
-        </Text>
       </View>
     </KeyboardAvoidingView>
   );
@@ -122,13 +127,6 @@ const styles = StyleSheet.create({
     height: 80,
     marginBottom: 10,
     resizeMode: "contain",
-  },
-  forgotPassword: {
-    color: "#4F46E5",
-    fontSize: 13,
-    textAlign: "right",
-    marginBottom: 10,
-    marginRight: 10,
   },
   title: {
     fontSize: 28,
@@ -153,11 +151,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     backgroundColor: "#FAFAFA",
   },
-  helperText: {
-    color: "#999",
-    fontSize: 12,
-    marginBottom: 12,
-    marginLeft: 8,
+  forgotPassword: {
+    color: "#4F46E5",
+    fontSize: 13,
+    textAlign: "right",
+    marginBottom: 10,
+    marginRight: 10,
   },
   button: {
     backgroundColor: "#000",
@@ -183,12 +182,5 @@ const styles = StyleSheet.create({
   link: {
     color: "#000",
     fontWeight: "700",
-  },
-  policyText: {
-    textAlign: "center",
-    color: "#AAA",
-    fontSize: 12,
-    marginTop: 20,
-    lineHeight: 18,
   },
 });
