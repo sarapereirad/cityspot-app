@@ -29,7 +29,10 @@ export default function PlaceCard(props) {
       </View>
 
       <TouchableOpacity
-        style={styles.favoriteBtn}
+        style={[
+          styles.favoriteBtn,
+          props.isSaved ? styles.favoriteBtnSaved : null,
+        ]}
         onPress={props.onFavoritePress}
       >
         <Ionicons name="heart" size={20} color="#fff" />
@@ -84,5 +87,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#4F46E5",
     justifyContent: "center",
     alignItems: "center",
+  },
+  favoriteBtnSaved: {
+    backgroundColor: "#111",
   },
 });

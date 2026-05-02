@@ -92,12 +92,10 @@ export default function DiscoverScreen(props) {
               <TouchableOpacity
                 key={place.id}
                 style={styles.smallCard}
-                onPress={() => props.navigation.navigate("Search")}
+                onPress={() =>
+                  props.navigation.navigate("PlaceDetails", { place: place })
+                }
               >
-                <View style={styles.favoriteMini}>
-                  <Ionicons name="heart" size={14} color="#000" />
-                </View>
-
                 <Image
                   source={{ uri: place.image }}
                   style={styles.smallImage}
@@ -123,7 +121,7 @@ export default function DiscoverScreen(props) {
 
         <Text style={styles.sectionTitle}>Categories</Text>
 
-        <ScrollView horizontal={true} showsHorizontalScrollIndicator={false}>
+        <View style={styles.categoriesContainer}>
           <CategoryButton
             label="Restaurant"
             icon="restaurant"
@@ -146,13 +144,13 @@ export default function DiscoverScreen(props) {
             }
           />
           <CategoryButton
-            label="Outdoor"
-            icon="leaf"
+            label="Leisure"
+            icon="happy"
             onPress={() =>
-              props.navigation.navigate("Search", { category: "Outdoor" })
+              props.navigation.navigate("Search", { category: "Leisure" })
             }
           />
-        </ScrollView>
+        </View>
       </View>
     </ScrollView>
   );
@@ -181,6 +179,11 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     marginTop: -10,
     backgroundColor: "#fff",
+  },
+  categoriesContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
   },
   searchBar: {
     height: 52,

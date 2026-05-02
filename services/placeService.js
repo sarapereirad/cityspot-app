@@ -4,7 +4,7 @@ const categoryImages = {
     "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
   study:
     "https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80",
-  outdoor:
+  leisure:
     "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80",
   default:
     "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80",
@@ -55,8 +55,16 @@ const formatAddress = (tags) => {
 };
 
 const getCategoryName = (tags) => {
-  if (tags.leisure === "park") {
-    return "Outdoor";
+  if (
+    tags.leisure === "park" ||
+    tags.leisure === "garden" ||
+    tags.leisure === "playground" ||
+    tags.leisure === "fitness_centre" ||
+    tags.leisure === "sports_centre" ||
+    tags.amenity === "cinema" ||
+    tags.shop
+  ) {
+    return "Leisure";
   }
 
   if (
@@ -79,51 +87,47 @@ const getCategoryName = (tags) => {
     return "Study";
   }
 
-  return "Outdoor";
+  return "Leisure";
 };
 
 const getCategoryImage = (tags) => {
-  if (tags.leisure === "park") {
-    return categoryImages.outdoor;
+  if (getCategoryName(tags) === "Leisure") {
+    return categoryImages.leisure;
   }
 
-  if (
-    tags.amenity === "cafe" ||
-    tags.amenity === "bar" ||
-    tags.amenity === "pub"
-  ) {
+  if (getCategoryName(tags) === "Café") {
     return categoryImages.cafe;
   }
 
-  if (
-    tags.amenity === "restaurant" ||
-    tags.amenity === "fast_food" ||
-    tags.amenity === "food_court"
-  ) {
+  if (getCategoryName(tags) === "Restaurant") {
     return categoryImages.restaurant;
   }
 
-  if (tags.amenity === "library" || tags.amenity === "coworking_space") {
+  if (getCategoryName(tags) === "Study") {
     return categoryImages.study;
   }
 
   return categoryImages.default;
 };
 
-const getCategoryFilter = (category) => {
+const getCategoryFilters = (category) => {
   if (category === "Restaurant") {
-    return '["amenity"~"restaurant|fast_food|food_court"]';
+    return ['["amenity"~"restaurant|fast_food|food_court"]'];
   }
 
   if (category === "Study") {
-    return '["amenity"~"library|coworking_space"]';
+    return ['["amenity"~"library|coworking_space"]'];
   }
 
   if (category === "Café") {
-    return '["amenity"~"bar|cafe|pub"]';
+    return ['["amenity"~"bar|cafe|pub"]'];
   }
 
-  return '["leisure"="park"]';
+  return [
+    '["leisure"~"park|garden|playground|fitness_centre|sports_centre"]',
+    '["amenity"="cinema"]',
+    '["shop"]',
+  ];
 };
 
 const fetchOverpassData = async (query) => {
@@ -142,57 +146,61 @@ const fetchOverpassData = async (query) => {
   return await response.json();
 };
 
+const mapPlace = (item, latitude, longitude) => {
+  const lat = item.lat || item.center?.lat;
+  const lng = item.lon || item.center?.lon;
+  const name = item.tags?.name?.trim();
+  const address = formatAddress(item.tags || {});
+  const hours = item.tags?.opening_hours?.trim() || "";
+
+  if (!lat || !lng) return null;
+  if (!name || name.toLowerCase() === "unnamed") return null;
+  if (!address) return null;
+
+  const distanceInMeters = getDistanceInMeters(latitude, longitude, lat, lng);
+
+  return {
+    id: item.id.toString(),
+    name: name,
+    address: address,
+    distance: formatDistance(distanceInMeters),
+    distanceInMeters: distanceInMeters,
+    category: getCategoryName(item.tags || {}),
+    hours: hours,
+    image: getCategoryImage(item.tags || {}),
+    lat: lat,
+    lng: lng,
+  };
+};
+
 export const fetchNearbyPlaces = async (latitude, longitude, radius = 1000) => {
+  const filters = [
+    '["amenity"~"bar|cafe|pub|restaurant|fast_food|food_court|library|coworking_space|cinema"]',
+    '["leisure"~"park|garden|playground|fitness_centre|sports_centre"]',
+    '["shop"]',
+  ];
+
   const query = `
     [out:json][timeout:20];
     (
-      node["amenity"~"bar|cafe|pub|restaurant|fast_food|food_court|library|coworking_space"](around:${radius},${latitude},${longitude});
-      way["amenity"~"bar|cafe|pub|restaurant|fast_food|food_court|library|coworking_space"](around:${radius},${latitude},${longitude});
-      node["leisure"="park"](around:${radius},${latitude},${longitude});
-      way["leisure"="park"](around:${radius},${latitude},${longitude});
+      ${filters
+        .map(
+          (filter) =>
+            `node${filter}(around:${radius},${latitude},${longitude});
+      way${filter}(around:${radius},${latitude},${longitude});`,
+        )
+        .join("\n")}
     );
-    out tags center 50;
+    out tags center 80;
   `;
 
   const data = await fetchOverpassData(query);
 
-  const places = data.elements
-    .map((item) => {
-      const lat = item.lat || item.center?.lat;
-      const lng = item.lon || item.center?.lon;
-      const name = item.tags?.name?.trim();
-      const address = formatAddress(item.tags || {});
-      const hours = item.tags?.opening_hours?.trim() || "";
-
-      if (!lat || !lng) return null;
-      if (!name || name.toLowerCase() === "unnamed") return null;
-      if (!address) return null;
-
-      const distanceInMeters = getDistanceInMeters(
-        latitude,
-        longitude,
-        lat,
-        lng,
-      );
-
-      return {
-        id: item.id.toString(),
-        name: name,
-        address: address,
-        distance: formatDistance(distanceInMeters),
-        distanceInMeters: distanceInMeters,
-        category: getCategoryName(item.tags || {}),
-        hours: hours,
-        image: getCategoryImage(item.tags || {}),
-        lat: lat,
-        lng: lng,
-      };
-    })
+  return data.elements
+    .map((item) => mapPlace(item, latitude, longitude))
     .filter((item) => item !== null)
     .sort((a, b) => a.distanceInMeters - b.distanceInMeters)
     .slice(0, 10);
-
-  return places;
 };
 
 export const fetchPlacesByCategoryNearby = async ({
@@ -201,53 +209,109 @@ export const fetchPlacesByCategoryNearby = async ({
   longitude,
   radius = 5000,
 }) => {
-  const filter = getCategoryFilter(category);
+  const filters = getCategoryFilters(category);
 
   const query = `
     [out:json][timeout:20];
     (
-      node${filter}(around:${radius},${latitude},${longitude});
-      way${filter}(around:${radius},${latitude},${longitude});
+      ${filters
+        .map(
+          (filter) =>
+            `node${filter}(around:${radius},${latitude},${longitude});
+      way${filter}(around:${radius},${latitude},${longitude});`,
+        )
+        .join("\n")}
     );
     out tags center 120;
   `;
 
   const data = await fetchOverpassData(query);
 
-  const places = data.elements
-    .map((item) => {
-      const lat = item.lat || item.center?.lat;
-      const lng = item.lon || item.center?.lon;
-      const name = item.tags?.name?.trim();
-      const address = formatAddress(item.tags || {});
-      const hours = item.tags?.opening_hours?.trim() || "";
-
-      if (!lat || !lng) return null;
-      if (!name || name.toLowerCase() === "unnamed") return null;
-      if (!address) return null;
-
-      const distanceInMeters = getDistanceInMeters(
-        latitude,
-        longitude,
-        lat,
-        lng,
-      );
-
-      return {
-        id: item.id.toString(),
-        name: name,
-        address: address,
-        distance: formatDistance(distanceInMeters),
-        distanceInMeters: distanceInMeters,
-        category: getCategoryName(item.tags || {}),
-        hours: hours,
-        image: getCategoryImage(item.tags || {}),
-        lat: lat,
-        lng: lng,
-      };
-    })
+  return data.elements
+    .map((item) => mapPlace(item, latitude, longitude))
     .filter((item) => item !== null)
     .sort((a, b) => a.distanceInMeters - b.distanceInMeters);
+};
 
-  return places;
+export const fetchPlacesForMapNearby = async (
+  latitude,
+  longitude,
+  radius = 2000,
+) => {
+  const filters = [
+    '["amenity"~"bar|cafe|pub|restaurant|fast_food|food_court|library|coworking_space|cinema"]',
+    '["leisure"~"park|garden|playground|fitness_centre|sports_centre"]',
+    '["shop"]',
+  ];
+
+  const query = `
+    [out:json][timeout:20];
+    (
+      ${filters
+        .map(
+          (filter) =>
+            `node${filter}(around:${radius},${latitude},${longitude});
+      way${filter}(around:${radius},${latitude},${longitude});`,
+        )
+        .join("\n")}
+    );
+    out tags center 120;
+  `;
+
+  const data = await fetchOverpassData(query);
+
+  return data.elements
+    .map((item) => mapPlace(item, latitude, longitude))
+    .filter((item) => item !== null);
+};
+
+export const fetchPlacesByTextNearby = async ({
+  text,
+  latitude,
+  longitude,
+  radius = 2000,
+}) => {
+  const filters = [
+    '["amenity"~"bar|cafe|pub|restaurant|fast_food|food_court|library|coworking_space|cinema"]',
+    '["leisure"~"park|garden|playground|fitness_centre|sports_centre"]',
+    '["shop"]',
+  ];
+
+  const query = `
+    [out:json][timeout:20];
+    (
+      ${filters
+        .map(
+          (filter) =>
+            `node${filter}(around:${radius},${latitude},${longitude});
+      way${filter}(around:${radius},${latitude},${longitude});`,
+        )
+        .join("\n")}
+    );
+    out tags center 300;
+  `;
+
+  const normalizeText = (value) => {
+    return value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/['’`´]/g, "")
+      .toLowerCase();
+  };
+
+  const data = await fetchOverpassData(query);
+  const searchValue = normalizeText(text);
+
+  return data.elements
+    .map((item) => mapPlace(item, latitude, longitude))
+    .filter((item) => item !== null)
+    .filter((place) => {
+      return (
+        normalizeText(place.name).includes(searchValue) ||
+        normalizeText(place.address).includes(searchValue) ||
+        normalizeText(place.category).includes(searchValue)
+      );
+    })
+    .sort((a, b) => a.distanceInMeters - b.distanceInMeters)
+    .slice(0, 100);
 };
