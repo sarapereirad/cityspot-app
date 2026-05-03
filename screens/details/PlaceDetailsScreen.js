@@ -128,7 +128,10 @@ export default function PlaceDetailsScreen(props) {
           <View style={styles.header}>
             <Text style={styles.title}>{place.name}</Text>
 
-            <TouchableOpacity style={styles.heart}>
+            <TouchableOpacity
+              style={[styles.heart, isPlaceSaved() ? styles.heartSaved : null]}
+              onPress={toggleSavedPlace}
+            >
               <Ionicons name="heart" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -240,6 +243,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#4F46E5",
     padding: 10,
     borderRadius: 20,
+  },
+  heartSaved: {
+    backgroundColor: "#111",
   },
   text: {
     fontSize: 16,

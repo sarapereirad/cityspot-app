@@ -10,11 +10,15 @@ import { auth, db } from "../firebaseConfig";
 export const savePlace = async (place) => {
   const user = auth.currentUser;
 
-  if (!user) {
+  if (!user || !place) {
     return;
   }
 
-  await setDoc(doc(db, "users", user.uid, "savedPlaces", place.id), place);
+  await setDoc(doc(db, "users", user.uid, "savedPlaces", String(place.id)), {
+    ...place,
+    id: String(place.id),
+    createdAt: new Date().toISOString(),
+  });
 };
 
 export const removeSavedPlace = async (placeId) => {
@@ -24,7 +28,7 @@ export const removeSavedPlace = async (placeId) => {
     return;
   }
 
-  await deleteDoc(doc(db, "users", user.uid, "savedPlaces", placeId));
+  await deleteDoc(doc(db, "users", user.uid, "savedPlaces", String(placeId)));
 };
 
 export const listenSavedPlaces = (setSavedPlaces) => {
@@ -32,13 +36,17 @@ export const listenSavedPlaces = (setSavedPlaces) => {
 
   if (!user) {
     setSavedPlaces([]);
-    return;
+    return () => {};
   }
 
   const savedRef = collection(db, "users", user.uid, "savedPlaces");
 
   return onSnapshot(savedRef, (snapshot) => {
-    const data = snapshot.docs.map((doc) => doc.data());
+    const data = snapshot.docs.map((item) => ({
+      id: item.id,
+      ...item.data(),
+    }));
+
     setSavedPlaces(data);
   });
 };

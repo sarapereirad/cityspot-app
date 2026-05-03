@@ -13,15 +13,38 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import CategoryButton from "../../components/CategoryButton";
 import { getUserLocation } from "../../services/locationService";
 import { fetchNearbyPlaces } from "../../services/placeService";
+import {
+  listenSavedPlaces,
+  removeSavedPlace,
+  savePlace,
+} from "../../services/savedService";
 
 export default function DiscoverScreen(props) {
   const [nearbyPlaces, setNearbyPlaces] = useState([]);
+  const [savedPlaces, setSavedPlaces] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     loadNearbyPlaces();
   }, []);
+
+  useEffect(() => {
+    const unsubscribe = listenSavedPlaces(setSavedPlaces);
+    return unsubscribe;
+  }, []);
+
+  const isPlaceSaved = (placeId) => {
+    return savedPlaces.some((place) => place.id === String(placeId));
+  };
+
+  const toggleSavedPlace = async (place) => {
+    if (isPlaceSaved(place.id)) {
+      await removeSavedPlace(place.id);
+    } else {
+      await savePlace(place);
+    }
+  };
 
   const loadNearbyPlaces = async () => {
     try {
@@ -34,6 +57,7 @@ export default function DiscoverScreen(props) {
         Alert.alert("Permission denied", "Location is required.");
         return;
       }
+
       const data = await fetchNearbyPlaces(
         location.latitude,
         location.longitude,
@@ -62,9 +86,11 @@ export default function DiscoverScreen(props) {
           onPress={() => props.navigation.navigate("Search")}
         >
           <Ionicons name="search" size={20} color="#333" />
+
           <Text style={styles.searchPlaceholder}>
             Search cafés, places or addresses
           </Text>
+
           <Ionicons name="arrow-forward" size={18} color="#111" />
         </TouchableOpacity>
 
@@ -101,6 +127,16 @@ export default function DiscoverScreen(props) {
                   style={styles.smallImage}
                 />
 
+                <TouchableOpacity
+                  style={[
+                    styles.favoriteMini,
+                    isPlaceSaved(place.id) ? styles.favoriteMiniSaved : null,
+                  ]}
+                  onPress={() => toggleSavedPlace(place)}
+                >
+                  <Ionicons name="heart" size={16} color="#fff" />
+                </TouchableOpacity>
+
                 <Text style={styles.smallTitle} numberOfLines={1}>
                   {place.name}
                 </Text>
@@ -129,6 +165,7 @@ export default function DiscoverScreen(props) {
               props.navigation.navigate("Search", { category: "Restaurant" })
             }
           />
+
           <CategoryButton
             label="Study"
             icon="book"
@@ -136,6 +173,7 @@ export default function DiscoverScreen(props) {
               props.navigation.navigate("Search", { category: "Study" })
             }
           />
+
           <CategoryButton
             label="Café"
             icon="cafe"
@@ -143,6 +181,7 @@ export default function DiscoverScreen(props) {
               props.navigation.navigate("Search", { category: "Café" })
             }
           />
+
           <CategoryButton
             label="Leisure"
             icon="happy"
@@ -179,11 +218,6 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     marginTop: -10,
     backgroundColor: "#fff",
-  },
-  categoriesContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
   },
   searchBar: {
     height: 52,
@@ -226,15 +260,18 @@ const styles = StyleSheet.create({
   },
   favoriteMini: {
     position: "absolute",
-    top: 10,
-    right: 10,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: "#fff",
+    top: 16,
+    right: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#4F46E5",
     justifyContent: "center",
     alignItems: "center",
     zIndex: 10,
+  },
+  favoriteMiniSaved: {
+    backgroundColor: "#111",
   },
   smallImage: {
     width: "100%",
@@ -256,5 +293,10 @@ const styles = StyleSheet.create({
     color: "#666",
     fontSize: 15,
     marginBottom: 22,
+  },
+  categoriesContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
   },
 });

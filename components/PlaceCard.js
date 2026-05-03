@@ -2,6 +2,11 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 export default function PlaceCard(props) {
+  const handleFavoritePress = (event) => {
+    event.stopPropagation();
+    props.onFavoritePress();
+  };
+
   return (
     <TouchableOpacity style={styles.card} onPress={props.onPress}>
       <Image source={{ uri: props.place.image }} style={styles.image} />
@@ -33,7 +38,7 @@ export default function PlaceCard(props) {
           styles.favoriteBtn,
           props.isSaved ? styles.favoriteBtnSaved : null,
         ]}
-        onPress={props.onFavoritePress}
+        onPress={handleFavoritePress}
       >
         <Ionicons name="heart" size={20} color="#fff" />
       </TouchableOpacity>
