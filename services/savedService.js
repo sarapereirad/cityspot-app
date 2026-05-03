@@ -17,7 +17,7 @@ export const savePlace = async (place) => {
   await setDoc(doc(db, "users", user.uid, "savedPlaces", String(place.id)), {
     ...place,
     id: String(place.id),
-    createdAt: new Date().toISOString(),
+    savedAt: new Date().toISOString(),
   });
 };
 
@@ -46,6 +46,8 @@ export const listenSavedPlaces = (setSavedPlaces) => {
       id: item.id,
       ...item.data(),
     }));
+
+    data.sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
 
     setSavedPlaces(data);
   });

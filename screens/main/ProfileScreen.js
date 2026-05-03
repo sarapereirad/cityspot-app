@@ -16,6 +16,8 @@ import {
   logoutUser,
   updateUserProfile,
 } from "../../services/authService";
+import { listenSavedPlaces } from "../../services/savedService";
+import { getSearches } from "../../services/searchService";
 
 export default function ProfileScreen() {
   const [profile, setProfile] = useState(null);
@@ -23,9 +25,15 @@ export default function ProfileScreen() {
   const [lastName, setLastName] = useState("");
   const [photoUri, setPhotoUri] = useState("");
   const [editing, setEditing] = useState(false);
+  const [savedPlaces, setSavedPlaces] = useState([]);
+  const [lastSearches, setLastSearches] = useState([]);
 
   useEffect(() => {
     loadProfile();
+    loadLastSearches();
+
+    const unsubscribe = listenSavedPlaces(setSavedPlaces);
+    return unsubscribe;
   }, []);
 
   const loadProfile = async () => {
@@ -43,6 +51,11 @@ export default function ProfileScreen() {
     } catch (error) {
       Alert.alert("Error", "Could not load profile.");
     }
+  };
+
+  const loadLastSearches = async () => {
+    const data = await getSearches();
+    setLastSearches(data);
   };
 
   const pickImage = async () => {
@@ -123,6 +136,7 @@ export default function ProfileScreen() {
 
         <View style={styles.fieldRow}>
           <Text style={styles.label}>Name :</Text>
+
           {editing ? (
             <TextInput
               style={styles.input}
@@ -139,6 +153,7 @@ export default function ProfileScreen() {
 
         <View style={styles.fieldRow}>
           <Text style={styles.label}>Surname :</Text>
+
           {editing ? (
             <TextInput
               style={styles.input}
@@ -160,13 +175,23 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.infoTitle}>Saved Places : 3</Text>
+        <Text style={styles.infoTitle}>
+          Saved Places : {savedPlaces.length}
+        </Text>
+
         <Text style={[styles.infoTitle, { marginTop: 20 }]}>
           Last searches :
         </Text>
-        <Text style={styles.listText}>- Café</Text>
-        <Text style={styles.listText}>- Study</Text>
-        <Text style={styles.listText}>- Restaurant</Text>
+
+        {lastSearches.length === 0 ? (
+          <Text style={styles.listText}>No recent searches.</Text>
+        ) : (
+          lastSearches.map((item, index) => (
+            <Text key={index} style={styles.listText}>
+              - {item}
+            </Text>
+          ))
+        )}
       </View>
 
       {editing ? (
