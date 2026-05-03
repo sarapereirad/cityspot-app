@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import * as ImagePicker from "expo-image-picker";
 import {
   listenSavedPlaces,
   removeSavedPlace,
@@ -20,6 +21,10 @@ import {
   getPlaceRatings,
   savePlaceRating,
 } from "../../services/ratingService";
+import {
+  listenPlacePhotos,
+  uploadPlacePhoto,
+} from "../../services/galleryService";
 
 export default function PlaceDetailsScreen(props) {
   const place = props.route.params ? props.route.params.place : null;
@@ -29,6 +34,8 @@ export default function PlaceDetailsScreen(props) {
   const [averageRating, setAverageRating] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedRating, setSelectedRating] = useState(0);
+  const [galleryPhotos, setGalleryPhotos] = useState([]);
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
 
   useEffect(() => {
     const unsubscribe = listenSavedPlaces(setSavedPlaces);
@@ -45,11 +52,20 @@ export default function PlaceDetailsScreen(props) {
   }, []);
 
   useEffect(() => {
+    if (!place) {
+      return;
+    }
+
+    const unsubscribe = listenPlacePhotos(place.id, setGalleryPhotos);
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
     setAverageRating(calculateAverageRating(ratings));
   }, [ratings]);
 
   const isPlaceSaved = () => {
-    return savedPlaces.some((item) => item.id === place.id);
+    return savedPlaces.some((item) => item.id === String(place.id));
   };
 
   const toggleSavedPlace = async () => {
@@ -57,6 +73,33 @@ export default function PlaceDetailsScreen(props) {
       await removeSavedPlace(place.id);
     } else {
       await savePlace(place);
+    }
+  };
+
+  const addPhoto = async () => {
+    try {
+      const permissionResult =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (!permissionResult.granted) {
+        Alert.alert(
+          "Permission required",
+          "You need to allow access to gallery.",
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets.length > 0) {
+        await uploadPlacePhoto(place.id, result.assets[0].uri);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Could not upload photo.");
     }
   };
 
@@ -162,15 +205,49 @@ export default function PlaceDetailsScreen(props) {
           <Text style={styles.section}>Description</Text>
           <Text style={styles.desc}>{getDescription()}</Text>
 
-          <Text style={styles.section}>Gallery</Text>
+          <View style={styles.galleryHeader}>
+            <Text style={styles.section}>Users gallery</Text>
+
+            <TouchableOpacity style={styles.addPhotoBtn} onPress={addPhoto}>
+              <Ionicons name="add" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.gallery}>
-            <Image source={{ uri: place.image }} style={styles.smallImg} />
-            <Image source={{ uri: place.image }} style={styles.smallImg} />
-            <Image source={{ uri: place.image }} style={styles.smallImg} />
+            {galleryPhotos.length === 0 ? (
+              <Text style={styles.desc}>No photos yet. Add the first one.</Text>
+            ) : (
+              galleryPhotos.map((photo) => (
+                <TouchableOpacity
+                  key={photo.id}
+                  style={styles.galleryPhotoBox}
+                  onPress={() => setSelectedPhoto(photo.imageUrl)}
+                >
+                  <Image
+                    source={{ uri: photo.imageUrl }}
+                    style={styles.galleryPhoto}
+                  />
+                </TouchableOpacity>
+              ))
+            )}
           </View>
         </View>
       </ScrollView>
+
+      <Modal visible={selectedPhoto !== null} transparent={true}>
+        <View style={styles.photoModalBg}>
+          <TouchableOpacity
+            style={styles.closePhotoBtn}
+            onPress={() => setSelectedPhoto(null)}
+          >
+            <Ionicons name="close" size={30} color="#fff" />
+          </TouchableOpacity>
+
+          {selectedPhoto ? (
+            <Image source={{ uri: selectedPhoto }} style={styles.bigPhoto} />
+          ) : null}
+        </View>
+      </Modal>
 
       <Modal visible={modalVisible} transparent={true}>
         <View style={styles.modalBg}>
@@ -274,15 +351,55 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
   },
-  gallery: {
+  galleryHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 15,
+  },
+  addPhotoBtn: {
+    backgroundColor: "#4F46E5",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  gallery: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     marginTop: 10,
   },
-  smallImg: {
+  galleryPhotoBox: {
     width: "30%",
     height: 90,
     borderRadius: 10,
+    borderWidth: 2,
+    borderColor: "#111",
+    marginRight: 10,
+    marginBottom: 10,
+    overflow: "hidden",
+  },
+  galleryPhoto: {
+    width: "100%",
+    height: "100%",
+  },
+  photoModalBg: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.95)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  closePhotoBtn: {
+    position: "absolute",
+    top: 50,
+    right: 25,
+    zIndex: 10,
+  },
+  bigPhoto: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "contain",
   },
   modalBg: {
     flex: 1,

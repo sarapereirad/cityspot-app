@@ -1,13 +1,9 @@
 const categoryImages = {
-  cafe: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=800&q=80",
-  restaurant:
-    "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
-  study:
-    "https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80",
-  leisure:
-    "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80",
-  default:
-    "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80",
+  cafe: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800",
+  restaurant: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800",
+  study: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800",
+  leisure: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=800",
+  default: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=800",
 };
 
 const toRadians = (degrees) => {
