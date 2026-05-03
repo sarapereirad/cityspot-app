@@ -54,7 +54,7 @@ export default function SearchScreen(props) {
   };
 
   const isPlaceSaved = (placeId) => {
-    return savedPlaces.some((place) => place.id === placeId);
+    return savedPlaces.some((place) => place.id === String(placeId));
   };
 
   const toggleSavedPlace = async (place) => {
@@ -166,14 +166,11 @@ export default function SearchScreen(props) {
             value={searchText}
             onChangeText={setSearchText}
             onSubmitEditing={handleSearch}
+            returnKeyType="search"
             style={styles.input}
           />
         </View>
       </View>
-
-      <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-        <Text style={styles.searchButtonText}>Search</Text>
-      </TouchableOpacity>
 
       {!searchText.trim() && places.length === 0 ? (
         <View style={styles.lastSearchContainer}>
@@ -233,7 +230,7 @@ const styles = StyleSheet.create({
   topRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 14,
+    marginBottom: 18,
   },
   backBtn: {
     width: 40,
@@ -259,19 +256,6 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 8,
     fontSize: 15,
-  },
-  searchButton: {
-    alignSelf: "center",
-    backgroundColor: "#ddd",
-    paddingHorizontal: 28,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginBottom: 18,
-  },
-  searchButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#111",
   },
   results: {
     paddingBottom: 24,
