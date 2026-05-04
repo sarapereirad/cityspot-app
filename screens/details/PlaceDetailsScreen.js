@@ -8,6 +8,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Share,
   Linking,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -26,6 +27,7 @@ import {
   listenPlacePhotos,
   uploadPlacePhoto,
 } from "../../services/galleryService";
+import * as Haptics from "expo-haptics";
 
 export default function PlaceDetailsScreen(props) {
   const place = props.route.params ? props.route.params.place : null;
@@ -70,6 +72,8 @@ export default function PlaceDetailsScreen(props) {
   };
 
   const toggleSavedPlace = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
     if (isPlaceSaved()) {
       await removeSavedPlace(place.id);
     } else {
@@ -135,6 +139,8 @@ export default function PlaceDetailsScreen(props) {
     }
 
     try {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
       await savePlaceRating(place.id, selectedRating);
       setModalVisible(false);
       setSelectedRating(0);
@@ -153,6 +159,18 @@ export default function PlaceDetailsScreen(props) {
   const openInMaps = () => {
     const url = `https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}`;
     Linking.openURL(url);
+  };
+
+  const sharePlace = async () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      await Share.share({
+        message: `Check out this place: ${place.name}\n📍 ${place.address}\nhttps://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}`,
+      });
+    } catch (error) {
+      Alert.alert("Error", "Could not share this place.");
+    }
   };
 
   if (!place) {
@@ -174,6 +192,10 @@ export default function PlaceDetailsScreen(props) {
             onPress={() => props.navigation.goBack()}
           >
             <Ionicons name="chevron-back" size={24} color="#fff" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.shareBtn} onPress={sharePlace}>
+            <Ionicons name="share-social" size={22} color="#fff" />
           </TouchableOpacity>
         </View>
 
@@ -481,5 +503,13 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  shareBtn: {
+    position: "absolute",
+    top: 50,
+    right: 20,
+    backgroundColor: "#1FB6AD",
+    padding: 10,
+    borderRadius: 20,
   },
 });
