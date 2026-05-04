@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Image,
   StyleSheet,
   Text,
@@ -14,6 +15,9 @@ import { getUserLocation } from "../../services/locationService";
 import { fetchPlacesForMapNearby } from "../../services/placeService";
 
 export default function MapScreen(props) {
+  const mapRef = useRef(null);
+  const markerScale = useRef(new Animated.Value(1)).current;
+
   const [region, setRegion] = useState(null);
   const [places, setPlaces] = useState([]);
   const [selectedPlace, setSelectedPlace] = useState(null);
@@ -24,18 +28,38 @@ export default function MapScreen(props) {
   }, []);
 
   useEffect(() => {
-    if (props.route.params && props.route.params.selectedPlace) {
-      const place = props.route.params.selectedPlace;
-      setSelectedPlace(place);
-
-      setRegion({
-        latitude: place.lat,
-        longitude: place.lng,
-        latitudeDelta: 0.02,
-        longitudeDelta: 0.02,
-      });
+    if (props.route.params?.selectedPlace) {
+      selectPlace(props.route.params.selectedPlace);
     }
   }, [props.route.params]);
+
+  const animateMarker = () => {
+    markerScale.setValue(0.8);
+
+    Animated.spring(markerScale, {
+      toValue: 1,
+      friction: 3,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const selectPlace = (place) => {
+    setSelectedPlace(place);
+    animateMarker();
+
+    const newRegion = {
+      latitude: place.lat,
+      longitude: place.lng,
+      latitudeDelta: 0.008,
+      longitudeDelta: 0.008,
+    };
+
+    setRegion(newRegion);
+
+    if (mapRef.current) {
+      mapRef.current.animateToRegion(newRegion, 800);
+    }
+  };
 
   const loadMapData = async () => {
     try {
@@ -48,12 +72,14 @@ export default function MapScreen(props) {
         return;
       }
 
-      setRegion({
+      const newRegion = {
         latitude: location.latitude,
         longitude: location.longitude,
         latitudeDelta: 0.02,
         longitudeDelta: 0.02,
-      });
+      };
+
+      setRegion(newRegion);
 
       const data = await fetchPlacesForMapNearby(
         location.latitude,
@@ -78,32 +104,28 @@ export default function MapScreen(props) {
         return;
       }
 
-      setRegion({
+      const newRegion = {
         latitude: location.latitude,
         longitude: location.longitude,
         latitudeDelta: 0.02,
         longitudeDelta: 0.02,
-      });
+      };
 
+      setRegion(newRegion);
       setSelectedPlace(null);
+
+      if (mapRef.current) {
+        mapRef.current.animateToRegion(newRegion, 800);
+      }
     } catch (error) {
       Alert.alert("Error", "Could not get current location.");
     }
   };
 
   const getMarkerColor = (category) => {
-    if (category === "Restaurant") {
-      return "orange";
-    }
-
-    if (category === "Study") {
-      return "blue";
-    }
-
-    if (category === "Café") {
-      return "purple";
-    }
-
+    if (category === "Restaurant") return "orange";
+    if (category === "Study") return "blue";
+    if (category === "Café") return "purple";
     return "green";
   };
 
@@ -123,7 +145,7 @@ export default function MapScreen(props) {
       </View>
 
       <View style={styles.mapContainer}>
-        <MapView style={styles.map} region={region}>
+        <MapView ref={mapRef} style={styles.map} region={region}>
           <Marker
             coordinate={{
               latitude: region.latitude,
@@ -145,9 +167,27 @@ export default function MapScreen(props) {
               }}
               title={place.name}
               pinColor={getMarkerColor(place.category)}
-              onPress={() => setSelectedPlace(place)}
+              onPress={() => selectPlace(place)}
             />
           ))}
+
+          {selectedPlace ? (
+            <Marker
+              coordinate={{
+                latitude: selectedPlace.lat,
+                longitude: selectedPlace.lng,
+              }}
+            >
+              <Animated.View
+                style={[
+                  styles.selectedMarker,
+                  { transform: [{ scale: markerScale }] },
+                ]}
+              >
+                <Ionicons name="location" size={34} color="#fff" />
+              </Animated.View>
+            </Marker>
+          ) : null}
         </MapView>
 
         <TouchableOpacity style={styles.locateButton} onPress={handleLocateMe}>
@@ -156,19 +196,26 @@ export default function MapScreen(props) {
         </TouchableOpacity>
       </View>
 
-      {selectedPlace ? (
+      {selectedPlace && selectedPlace.name ? (
         <View style={styles.infoCard}>
           <Image source={{ uri: selectedPlace.image }} style={styles.image} />
 
           <View style={styles.info}>
             <Text style={styles.placeName}>{selectedPlace.name}</Text>
-            <Text style={styles.placeText}>{selectedPlace.address}</Text>
+
             <Text style={styles.placeText}>
-              {selectedPlace.distance ? selectedPlace.distance : ""}
+              📍{" "}
+              {selectedPlace.address && selectedPlace.address.trim() !== ""
+                ? selectedPlace.address
+                : "Address not available"}
             </Text>
+
+            <Text style={styles.placeText}>{selectedPlace.distance || ""}</Text>
+
             <Text style={styles.placeText}>
               Category: {selectedPlace.category}
             </Text>
+
             <Text style={styles.placeText}>
               {selectedPlace.hours
                 ? selectedPlace.hours
@@ -206,12 +253,10 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 10,
-    backgroundColor: "#fff",
   },
   title: {
     fontSize: 30,
     fontWeight: "700",
-    color: "#111",
   },
   subtitle: {
     fontSize: 14,
@@ -220,7 +265,6 @@ const styles = StyleSheet.create({
   },
   mapContainer: {
     flex: 1,
-    position: "relative",
   },
   map: {
     width: "100%",
@@ -248,8 +292,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 2,
     borderColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
+  },
+  selectedMarker: {
+    backgroundColor: "#4F46E5",
+    padding: 12,
+    borderRadius: 30,
+    borderWidth: 4,
+    borderColor: "#fff",
   },
   infoCard: {
     position: "absolute",
@@ -271,15 +320,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   placeName: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "700",
-    color: "#111",
-    marginBottom: 4,
   },
   placeText: {
     fontSize: 14,
-    color: "#333",
-    marginBottom: 3,
+    marginTop: 2,
   },
   detailsButton: {
     marginTop: 10,
@@ -289,8 +335,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   detailsButtonText: {
-    fontSize: 15,
     fontWeight: "600",
-    color: "#111",
   },
 });
