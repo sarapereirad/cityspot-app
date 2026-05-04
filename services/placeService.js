@@ -40,33 +40,31 @@ const formatDistance = (meters) => {
 const formatAddress = (tags) => {
   const street = tags["addr:street"];
   const number = tags["addr:housenumber"];
-  const postcode = tags["addr:postcode"];
   const city = tags["addr:city"];
-  const country = tags["addr:country"];
+  const postcode = tags["addr:postcode"];
+  const name = tags.name;
 
   let address = "";
 
   if (street && number) {
     address += street + " " + number;
-  } else if (street) {
-    address += street;
   }
 
   if (postcode && city) {
-    address += (address ? ", " : "") + postcode + " " + city;
-  } else if (city) {
-    address += (address ? ", " : "") + city;
+    address += address ? ", " : "";
+    address += postcode + " " + city;
   }
 
-  if (country) {
-    address += (address ? ", " : "") + country.toUpperCase();
+  if (city && !postcode) {
+    address += address ? ", " : "";
+    address += city;
   }
 
-  if (!address) {
-    return "Address not available";
+  if (!address && name) {
+    return name;
   }
 
-  return address;
+  return address || "Address not available";
 };
 
 const getCategoryName = (tags) => {

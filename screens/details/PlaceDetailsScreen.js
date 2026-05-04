@@ -187,7 +187,6 @@ export default function PlaceDetailsScreen(props) {
             ⭐ {averageRating.toFixed(1)} / 5 ({ratings.length})
           </Text>
           <Text style={styles.text}>
-            📍{" "}
             {place.address && place.address.trim() !== ""
               ? place.address
               : "Address not available"}
