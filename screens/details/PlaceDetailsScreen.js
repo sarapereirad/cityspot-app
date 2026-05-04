@@ -8,6 +8,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Linking,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImagePicker from "expo-image-picker";
@@ -149,6 +150,11 @@ export default function PlaceDetailsScreen(props) {
     });
   };
 
+  const openInMaps = () => {
+    const url = `https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}`;
+    Linking.openURL(url);
+  };
+
   if (!place) {
     return (
       <View style={styles.container}>
@@ -202,13 +208,17 @@ export default function PlaceDetailsScreen(props) {
               style={styles.btn}
               onPress={() => setModalVisible(true)}
             >
-              <Text>Rate</Text>
+              <Text style={styles.btnText}>Rate</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.btn} onPress={openMap}>
-              <Text>Open in Map</Text>
+              <Text style={styles.btnText}>Open in Map</Text>
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity style={styles.mapButton} onPress={openInMaps}>
+            <Text style={styles.mapButtonText}>Open in Google Maps</Text>
+          </TouchableOpacity>
 
           <Text style={styles.section}>Description</Text>
           <Text style={styles.desc}>{getDescription()}</Text>
@@ -338,16 +348,21 @@ const styles = StyleSheet.create({
   },
   buttons: {
     flexDirection: "row",
-    justifyContent: "center",
+    justifyContent: "space-between",
     marginTop: 16,
-    marginBottom: 12,
   },
   btn: {
+    flex: 1,
     backgroundColor: "#ddd",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: 20,
     marginHorizontal: 6,
+    alignItems: "center",
+  },
+  btnText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#111",
   },
   section: {
     fontSize: 22,
@@ -453,5 +468,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
+  },
+  mapButton: {
+    marginTop: 16,
+    backgroundColor: "#111",
+    paddingVertical: 14,
+    borderRadius: 20,
+    alignItems: "center",
+  },
+
+  mapButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
