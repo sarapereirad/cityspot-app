@@ -1,9 +1,11 @@
 const categoryImages = {
-  cafe: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800",
-  restaurant: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800",
-  study: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800",
-  leisure: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=800",
-  default: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=800",
+  cafe: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&auto=format&fit=crop",
+  restaurant:
+    "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop",
+  study:
+    "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&auto=format&fit=crop",
+  shopping:
+    "https://images.unsplash.com/photo-1697443434358-b13133cf81e7?w=800&auto=format&fit=crop",
 };
 
 const toRadians = (degrees) => {
@@ -38,29 +40,37 @@ const formatDistance = (meters) => {
 const formatAddress = (tags) => {
   const street = tags["addr:street"];
   const number = tags["addr:housenumber"];
+  const postcode = tags["addr:postcode"];
+  const city = tags["addr:city"];
+
+  let address = "";
 
   if (street && number) {
-    return street + " " + number;
+    address += street + " " + number;
+  } else if (street) {
+    address += street;
   }
 
-  if (street) {
-    return street;
+  if (postcode && city) {
+    address += (address ? ", " : "") + postcode + " " + city;
+  } else if (city) {
+    address += (address ? ", " : "") + city;
   }
 
-  return "";
+  if (!address) {
+    return "Address not available";
+  }
+
+  return address;
 };
 
 const getCategoryName = (tags) => {
-  if (
-    tags.leisure === "park" ||
-    tags.leisure === "garden" ||
-    tags.leisure === "playground" ||
-    tags.leisure === "fitness_centre" ||
-    tags.leisure === "sports_centre" ||
-    tags.amenity === "cinema" ||
-    tags.shop
-  ) {
-    return "Leisure";
+  if (!tags) {
+    return "Shopping";
+  }
+
+  if (tags.amenity === "library" || tags.amenity === "coworking_space") {
+    return "Study";
   }
 
   if (
@@ -79,31 +89,33 @@ const getCategoryName = (tags) => {
     return "Restaurant";
   }
 
-  if (tags.amenity === "library" || tags.amenity === "coworking_space") {
-    return "Study";
+  if (tags.shop) {
+    return "Shopping";
   }
 
-  return "Leisure";
+  return "Shopping";
 };
 
 const getCategoryImage = (tags) => {
-  if (getCategoryName(tags) === "Leisure") {
-    return categoryImages.leisure;
-  }
+  const category = getCategoryName(tags || {});
 
-  if (getCategoryName(tags) === "Café") {
-    return categoryImages.cafe;
-  }
-
-  if (getCategoryName(tags) === "Restaurant") {
-    return categoryImages.restaurant;
-  }
-
-  if (getCategoryName(tags) === "Study") {
+  if (category === "Study") {
     return categoryImages.study;
   }
 
-  return categoryImages.default;
+  if (category === "Café") {
+    return categoryImages.cafe;
+  }
+
+  if (category === "Restaurant") {
+    return categoryImages.restaurant;
+  }
+
+  if (category === "Shopping") {
+    return categoryImages.shopping;
+  }
+
+  return categoryImages.shopping;
 };
 
 const getCategoryFilters = (category) => {
@@ -119,11 +131,11 @@ const getCategoryFilters = (category) => {
     return ['["amenity"~"bar|cafe|pub"]'];
   }
 
-  return [
-    '["leisure"~"park|garden|playground|fitness_centre|sports_centre"]',
-    '["amenity"="cinema"]',
-    '["shop"]',
-  ];
+  if (category === "Shopping") {
+    return ['["shop"]'];
+  }
+
+  return ['["shop"]'];
 };
 
 const fetchOverpassData = async (query) => {
@@ -151,7 +163,6 @@ const mapPlace = (item, latitude, longitude) => {
 
   if (!lat || !lng) return null;
   if (!name || name.toLowerCase() === "unnamed") return null;
-  if (!address) return null;
 
   const distanceInMeters = getDistanceInMeters(latitude, longitude, lat, lng);
 
@@ -171,8 +182,7 @@ const mapPlace = (item, latitude, longitude) => {
 
 export const fetchNearbyPlaces = async (latitude, longitude, radius = 1000) => {
   const filters = [
-    '["amenity"~"bar|cafe|pub|restaurant|fast_food|food_court|library|coworking_space|cinema"]',
-    '["leisure"~"park|garden|playground|fitness_centre|sports_centre"]',
+    '["amenity"~"bar|cafe|pub|restaurant|fast_food|food_court|library|coworking_space"]',
     '["shop"]',
   ];
 
@@ -226,6 +236,7 @@ export const fetchPlacesByCategoryNearby = async ({
   return data.elements
     .map((item) => mapPlace(item, latitude, longitude))
     .filter((item) => item !== null)
+    .filter((item) => item.category === category)
     .sort((a, b) => a.distanceInMeters - b.distanceInMeters);
 };
 
@@ -235,8 +246,7 @@ export const fetchPlacesForMapNearby = async (
   radius = 2000,
 ) => {
   const filters = [
-    '["amenity"~"bar|cafe|pub|restaurant|fast_food|food_court|library|coworking_space|cinema"]',
-    '["leisure"~"park|garden|playground|fitness_centre|sports_centre"]',
+    '["amenity"~"bar|cafe|pub|restaurant|fast_food|food_court|library|coworking_space"]',
     '["shop"]',
   ];
 
@@ -268,8 +278,7 @@ export const fetchPlacesByTextNearby = async ({
   radius = 2000,
 }) => {
   const filters = [
-    '["amenity"~"bar|cafe|pub|restaurant|fast_food|food_court|library|coworking_space|cinema"]',
-    '["leisure"~"park|garden|playground|fitness_centre|sports_centre"]',
+    '["amenity"~"bar|cafe|pub|restaurant|fast_food|food_court|library|coworking_space"]',
     '["shop"]',
   ];
 

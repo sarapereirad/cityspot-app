@@ -109,18 +109,22 @@ export default function PlaceDetailsScreen(props) {
     }
 
     if (place.category === "Study") {
-      return "This is a quiet place where people can study, work, or relax. It can be useful for students or remote workers.";
+      return "This is a quiet place where people can study, work, or relax. It is useful for students or remote workers.";
     }
 
     if (place.category === "Restaurant") {
-      return "This restaurant is a place where people can eat and spend time with friends or family. It can be useful when looking for food nearby.";
+      return "This restaurant is a place where people can eat and spend time with friends or family.";
     }
 
     if (place.category === "Café") {
-      return "This café is a nice place to drink coffee, relax, or work for a short time. It can also be useful for meeting friends.";
+      return "This café is a nice place to drink coffee, relax, or meet friends.";
     }
 
-    return "This outdoor place can be useful for walking, relaxing, or spending time outside. It is a good option when looking for fresh air nearby.";
+    if (place.category === "Shopping") {
+      return "This place is a shopping area where you can buy products, explore stores, and enjoy your time.";
+    }
+
+    return "This place can be useful to discover and spend time nearby.";
   };
 
   const handleSendRating = async () => {
@@ -182,7 +186,12 @@ export default function PlaceDetailsScreen(props) {
           <Text style={styles.text}>
             ⭐ {averageRating.toFixed(1)} / 5 ({ratings.length})
           </Text>
-          <Text style={styles.text}>{place.address}</Text>
+          <Text style={styles.text}>
+            📍{" "}
+            {place.address && place.address.trim() !== ""
+              ? place.address
+              : "Address not available"}
+          </Text>
           <Text style={styles.text}>{place.distance}</Text>
           <Text style={styles.text}>Category : {place.category}</Text>
           <Text style={styles.text}>

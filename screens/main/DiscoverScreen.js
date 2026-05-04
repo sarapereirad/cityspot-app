@@ -183,10 +183,10 @@ export default function DiscoverScreen(props) {
           />
 
           <CategoryButton
-            label="Leisure"
-            icon="happy"
+            label="Shopping"
+            icon="cart"
             onPress={() =>
-              props.navigation.navigate("Search", { category: "Leisure" })
+              props.navigation.navigate("Search", { category: "Shopping" })
             }
           />
         </View>
