@@ -42,6 +42,7 @@ const formatAddress = (tags) => {
   const number = tags["addr:housenumber"];
   const postcode = tags["addr:postcode"];
   const city = tags["addr:city"];
+  const country = tags["addr:country"];
 
   let address = "";
 
@@ -55,6 +56,10 @@ const formatAddress = (tags) => {
     address += (address ? ", " : "") + postcode + " " + city;
   } else if (city) {
     address += (address ? ", " : "") + city;
+  }
+
+  if (country) {
+    address += (address ? ", " : "") + country.toUpperCase();
   }
 
   if (!address) {
