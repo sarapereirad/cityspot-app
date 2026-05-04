@@ -5,7 +5,7 @@ const categoryImages = {
   study:
     "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&auto=format&fit=crop",
   shopping:
-    "https://images.unsplash.com/photo-1697443434358-b13133cf81e7?w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1567958451986-2de427a4a0be?w=800&auto=format&fit=crop",
 };
 
 const toRadians = (degrees) => {
