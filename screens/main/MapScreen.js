@@ -22,6 +22,7 @@ export default function MapScreen(props) {
   const [places, setPlaces] = useState([]);
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
 
   useEffect(() => {
     loadMapData();
@@ -72,6 +73,8 @@ export default function MapScreen(props) {
         return;
       }
 
+      setUserLocation(location);
+
       const newRegion = {
         latitude: location.latitude,
         longitude: location.longitude,
@@ -103,6 +106,8 @@ export default function MapScreen(props) {
         Alert.alert("Permission denied", "Location is required.");
         return;
       }
+
+      setUserLocation(location);
 
       const newRegion = {
         latitude: location.latitude,
@@ -146,48 +151,54 @@ export default function MapScreen(props) {
 
       <View style={styles.mapContainer}>
         <MapView ref={mapRef} style={styles.map} region={region}>
-          <Marker
-            coordinate={{
-              latitude: region.latitude,
-              longitude: region.longitude,
-            }}
-            title="You are here"
-          >
-            <View style={styles.userMarker}>
-              <Ionicons name="person" size={16} color="#fff" />
-            </View>
-          </Marker>
-
-          {places.map((place) => (
-            <Marker
-              key={place.id}
-              coordinate={{
-                latitude: place.lat,
-                longitude: place.lng,
-              }}
-              title={place.name}
-              pinColor={getMarkerColor(place.category)}
-              onPress={() => selectPlace(place)}
-            />
-          ))}
-
-          {selectedPlace ? (
+          {userLocation ? (
             <Marker
               coordinate={{
-                latitude: selectedPlace.lat,
-                longitude: selectedPlace.lng,
+                latitude: userLocation.latitude,
+                longitude: userLocation.longitude,
               }}
+              title="You are here"
             >
-              <Animated.View
-                style={[
-                  styles.selectedMarker,
-                  { transform: [{ scale: markerScale }] },
-                ]}
-              >
-                <Ionicons name="location" size={34} color="#fff" />
-              </Animated.View>
+              <View style={styles.userMarker}>
+                <Ionicons name="person" size={16} color="#fff" />
+              </View>
             </Marker>
           ) : null}
+
+          {places.map((place) => {
+            const isSelected = selectedPlace?.id === place.id;
+
+            return (
+              <Marker
+                key={place.id}
+                coordinate={{
+                  latitude: place.lat,
+                  longitude: place.lng,
+                }}
+                onPress={() => selectPlace(place)}
+              >
+                {isSelected ? (
+                  <Animated.View
+                    style={[
+                      styles.selectedMarker,
+                      { transform: [{ scale: markerScale }] },
+                    ]}
+                  >
+                    <Ionicons name="location" size={30} color="#fff" />
+                  </Animated.View>
+                ) : (
+                  <View
+                    style={[
+                      styles.normalMarker,
+                      { backgroundColor: getMarkerColor(place.category) },
+                    ]}
+                  >
+                    <Ionicons name="location" size={14} color="#fff" />
+                  </View>
+                )}
+              </Marker>
+            );
+          })}
         </MapView>
 
         <TouchableOpacity style={styles.locateButton} onPress={handleLocateMe}>
@@ -292,6 +303,15 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 2,
     borderColor: "#fff",
+  },
+  normalMarker: {
+    width: 35,
+    height: 35,
+    borderRadius: 18,
+    borderWidth: 3,
+    borderColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
   },
   selectedMarker: {
     backgroundColor: "#4F46E5",
