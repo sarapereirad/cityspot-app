@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Image,
@@ -10,6 +10,8 @@ import {
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImagePicker from "expo-image-picker";
+import { useFocusEffect } from "@react-navigation/native";
+
 import { auth } from "../../firebaseConfig";
 import {
   getUserProfile,
@@ -30,11 +32,16 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     loadProfile();
-    loadLastSearches();
 
     const unsubscribe = listenSavedPlaces(setSavedPlaces);
     return unsubscribe;
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadLastSearches();
+    }, []),
+  );
 
   const loadProfile = async () => {
     try {
@@ -186,7 +193,7 @@ export default function ProfileScreen() {
         {lastSearches.length === 0 ? (
           <Text style={styles.listText}>No recent searches.</Text>
         ) : (
-          lastSearches.map((item, index) => (
+          lastSearches.slice(0, 3).map((item, index) => (
             <Text key={index} style={styles.listText}>
               - {item}
             </Text>

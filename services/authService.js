@@ -22,8 +22,7 @@ export const registerUser = async (email, password) => {
     firstName: "",
     lastName: "",
     photoUri: "",
-    savedPlaces: 3,
-    lastSearches: ["Café", "Study", "Restaurant"],
+    lastSearches: [],
     createdAt: new Date().toISOString(),
   });
 

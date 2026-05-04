@@ -1,28 +1,43 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const KEY = "last_searches";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { auth, db } from "../firebaseConfig";
 
 export const saveSearch = async (text) => {
   try {
-    if (!text.trim()) return;
+    const user = auth.currentUser;
 
-    const existing = await AsyncStorage.getItem(KEY);
-    let searches = existing ? JSON.parse(existing) : [];
+    if (!user || !text.trim()) {
+      return;
+    }
+
+    const userRef = doc(db, "users", user.uid);
+    const userSnapshot = await getDoc(userRef);
+
+    const userData = userSnapshot.data();
+    let searches = userData?.lastSearches || [];
 
     searches = searches.filter((item) => item !== text);
-
     searches.unshift(text);
-
     searches = searches.slice(0, 3);
 
-    await AsyncStorage.setItem(KEY, JSON.stringify(searches));
+    await updateDoc(userRef, {
+      lastSearches: searches,
+    });
   } catch (error) {}
 };
 
 export const getSearches = async () => {
   try {
-    const data = await AsyncStorage.getItem(KEY);
-    return data ? JSON.parse(data) : [];
+    const user = auth.currentUser;
+
+    if (!user) {
+      return [];
+    }
+
+    const userRef = doc(db, "users", user.uid);
+    const userSnapshot = await getDoc(userRef);
+
+    const userData = userSnapshot.data();
+    return userData?.lastSearches || [];
   } catch (error) {
     return [];
   }
