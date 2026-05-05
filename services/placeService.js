@@ -1,3 +1,5 @@
+import { getAddressFromCoordinates } from "./addressService";
+
 const categoryImages = {
   cafe: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&auto=format&fit=crop",
   restaurant:
@@ -40,28 +42,35 @@ const formatDistance = (meters) => {
 const formatAddress = (tags) => {
   const street = tags["addr:street"];
   const number = tags["addr:housenumber"];
-  const city = tags["addr:city"];
   const postcode = tags["addr:postcode"];
+
+  const city =
+    tags["addr:city"] ||
+    tags["addr:town"] ||
+    tags["addr:village"] ||
+    tags["addr:municipality"] ||
+    tags["addr:place"];
+
   const name = tags.name;
 
   let address = "";
 
   if (street && number) {
     address += street + " " + number;
+  } else if (street) {
+    address += street;
   }
 
-  if (postcode && city) {
+  if (postcode || city) {
     address += address ? ", " : "";
-    address += postcode + " " + city;
-  }
 
-  if (city && !postcode) {
-    address += address ? ", " : "";
-    address += city;
-  }
-
-  if (!address && name) {
-    return name;
+    if (postcode && city) {
+      address += postcode + " " + city;
+    } else if (postcode) {
+      address += postcode;
+    } else {
+      address += city;
+    }
   }
 
   return address || "Address not available";
@@ -157,15 +166,61 @@ const fetchOverpassData = async (query) => {
   return await response.json();
 };
 
-const mapPlace = (item, latitude, longitude) => {
+const mapPlace = async (item, latitude, longitude) => {
   const lat = item.lat || item.center?.lat;
   const lng = item.lon || item.center?.lon;
-  const name = item.tags?.name?.trim();
-  const address = formatAddress(item.tags || {});
-  const hours = item.tags?.opening_hours?.trim() || "";
+  const tags = item.tags || {};
+  const name = tags.name?.trim();
+  const hours = tags.opening_hours?.trim() || "";
 
   if (!lat || !lng) return null;
   if (!name || name.toLowerCase() === "unnamed") return null;
+
+  let postcode = tags["addr:postcode"] || "";
+
+  let city =
+    tags["addr:city"] ||
+    tags["addr:town"] ||
+    tags["addr:village"] ||
+    tags["addr:municipality"] ||
+    tags["addr:place"] ||
+    "";
+
+  let street = tags["addr:street"] || "";
+  let number = tags["addr:housenumber"] || "";
+
+  const isAddressIncomplete =
+    (!street && !postcode && !city) || (!postcode && !city);
+
+  if (isAddressIncomplete) {
+    const reverseAddress = await getAddressFromCoordinates(lat, lng);
+
+    if (reverseAddress) {
+      if (!street) {
+        street = reverseAddress.road;
+      }
+
+      if (!number) {
+        number = reverseAddress.houseNumber;
+      }
+
+      if (!postcode) {
+        postcode = reverseAddress.postcode;
+      }
+
+      if (!city) {
+        city = reverseAddress.city;
+      }
+    }
+  }
+
+  const address = formatAddress({
+    ...tags,
+    "addr:street": street,
+    "addr:housenumber": number,
+    "addr:postcode": postcode,
+    "addr:city": city,
+  });
 
   const distanceInMeters = getDistanceInMeters(latitude, longitude, lat, lng);
 
@@ -173,11 +228,13 @@ const mapPlace = (item, latitude, longitude) => {
     id: item.id.toString(),
     name: name,
     address: address,
+    postcode: postcode,
+    city: city,
     distance: formatDistance(distanceInMeters),
     distanceInMeters: distanceInMeters,
-    category: getCategoryName(item.tags || {}),
+    category: getCategoryName(tags),
     hours: hours,
-    image: getCategoryImage(item.tags || {}),
+    image: getCategoryImage(tags),
     lat: lat,
     lng: lng,
   };
@@ -205,8 +262,11 @@ export const fetchNearbyPlaces = async (latitude, longitude, radius = 1000) => {
 
   const data = await fetchOverpassData(query);
 
-  return data.elements
-    .map((item) => mapPlace(item, latitude, longitude))
+  const places = await Promise.all(
+    data.elements.map((item) => mapPlace(item, latitude, longitude)),
+  );
+
+  return places
     .filter((item) => item !== null)
     .sort((a, b) => a.distanceInMeters - b.distanceInMeters)
     .slice(0, 10);
@@ -236,8 +296,11 @@ export const fetchPlacesByCategoryNearby = async ({
 
   const data = await fetchOverpassData(query);
 
-  return data.elements
-    .map((item) => mapPlace(item, latitude, longitude))
+  const places = await Promise.all(
+    data.elements.map((item) => mapPlace(item, latitude, longitude)),
+  );
+
+  return places
     .filter((item) => item !== null)
     .filter((item) => item.category === category)
     .sort((a, b) => a.distanceInMeters - b.distanceInMeters);
@@ -269,9 +332,11 @@ export const fetchPlacesForMapNearby = async (
 
   const data = await fetchOverpassData(query);
 
-  return data.elements
-    .map((item) => mapPlace(item, latitude, longitude))
-    .filter((item) => item !== null);
+  const places = await Promise.all(
+    data.elements.map((item) => mapPlace(item, latitude, longitude)),
+  );
+
+  return places.filter((item) => item !== null);
 };
 
 export const fetchPlacesByTextNearby = async ({
@@ -308,10 +373,14 @@ export const fetchPlacesByTextNearby = async ({
   };
 
   const data = await fetchOverpassData(query);
+
+  const places = await Promise.all(
+    data.elements.map((item) => mapPlace(item, latitude, longitude)),
+  );
+
   const searchValue = normalizeText(text);
 
-  return data.elements
-    .map((item) => mapPlace(item, latitude, longitude))
+  return places
     .filter((item) => item !== null)
     .filter((place) => {
       return (
