@@ -161,6 +161,13 @@ export default function PlaceDetailsScreen(props) {
     Linking.openURL(url);
   };
 
+  const searchOnGoogle = () => {
+    const query = `${place.name} ${place.address || ""} opening hours`;
+    const url = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+
+    Linking.openURL(url);
+  };
+
   const sharePlace = async () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -222,7 +229,16 @@ export default function PlaceDetailsScreen(props) {
           <Text style={styles.text}>{place.distance}</Text>
           <Text style={styles.text}>Category : {place.category}</Text>
           <Text style={styles.text}>
-            {place.hours ? place.hours : "Hours not available"}
+            {place.hours ? (
+              <Text style={styles.text}>{place.hours}</Text>
+            ) : (
+              <Text style={styles.text}>
+                Hours not available –{" "}
+                <Text style={styles.googleLink} onPress={searchOnGoogle}>
+                  check on Google
+                </Text>
+              </Text>
+            )}
           </Text>
 
           <View style={styles.buttons}>
@@ -363,6 +379,11 @@ const styles = StyleSheet.create({
   },
   heartSaved: {
     backgroundColor: "#111",
+  },
+  googleLink: {
+    color: "#4F46E5",
+    textDecorationLine: "underline",
+    fontWeight: "600",
   },
   text: {
     fontSize: 16,
