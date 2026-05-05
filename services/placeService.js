@@ -150,20 +150,36 @@ const getCategoryFilters = (category) => {
   return ['["shop"]'];
 };
 
-const fetchOverpassData = async (query) => {
-  const response = await fetch("https://overpass-api.de/api/interpreter", {
-    method: "POST",
-    headers: {
-      "Content-Type": "text/plain",
-    },
-    body: query,
-  });
+const OVERPASS_ENDPOINTS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.openstreetmap.ru/api/interpreter",
+];
 
-  if (!response.ok) {
-    throw new Error("Error in fetch");
+const fetchOverpassData = async (query) => {
+  let lastError = null;
+
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain",
+        },
+        body: query,
+      });
+
+      if (response.ok) {
+        return await response.json();
+      }
+
+      lastError = new Error("Overpass response not ok");
+    } catch (error) {
+      lastError = error;
+    }
   }
 
-  return await response.json();
+  throw lastError;
 };
 
 const mapPlace = async (item, latitude, longitude) => {
