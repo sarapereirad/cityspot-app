@@ -10,6 +10,9 @@ import {
   Text,
   TouchableOpacity,
   View,
+  TextInput,
+  ActivityIndicator,
+  Keyboard,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImagePicker from "expo-image-picker";
@@ -19,6 +22,7 @@ import * as Calendar from "expo-calendar";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { getUserLocation } from "../../services/locationService";
 import { getRouteInfo } from "../../services/routeService";
+import { askAIAboutPlace } from "../../services/aiService";
 
 import {
   listenSavedPlaces,
@@ -50,6 +54,10 @@ export default function PlaceDetailsScreen(props) {
   const [selectedTravelMode, setSelectedTravelMode] = useState("");
   const [routeInfo, setRouteInfo] = useState(null);
   const [routeLoading, setRouteLoading] = useState(false);
+  const [aiModalVisible, setAiModalVisible] = useState(false);
+  const [aiQuestion, setAiQuestion] = useState("");
+  const [aiAnswer, setAiAnswer] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     const unsubscribe = listenSavedPlaces(setSavedPlaces);
@@ -273,6 +281,32 @@ export default function PlaceDetailsScreen(props) {
     }
   };
 
+  const handleAskAI = async () => {
+    Keyboard.dismiss();
+
+    if (!aiQuestion.trim()) {
+      Alert.alert("Error", "Write a question first.");
+      return;
+    }
+
+    try {
+      setAiLoading(true);
+
+      const answer = await askAIAboutPlace(place, aiQuestion);
+
+      if (!answer) {
+        Alert.alert("Error", "Could not get an AI answer.");
+        return;
+      }
+
+      setAiAnswer(answer);
+    } catch (error) {
+      Alert.alert("Error", "Could not get an AI answer.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   if (!place) {
     return (
       <View style={styles.container}>
@@ -322,35 +356,46 @@ export default function PlaceDetailsScreen(props) {
             </Text>
           )}
 
-          <View style={styles.actionGrid}>
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={() => setModalVisible(true)}
-            >
-              <Text style={styles.actionBtnText}>Rate</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionBtn} onPress={openMap}>
-              <Text style={styles.actionBtnText}>Open in Map</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionBtn} onPress={copyAddress}>
-              <Ionicons name="copy-outline" size={17} color="#111" />
-              <Text style={styles.actionBtnText}>Copy address</Text>
+          <View style={styles.mapActionsRow}>
+            <TouchableOpacity style={styles.mapSmallButton} onPress={openMap}>
+              <Ionicons name="map-outline" size={17} color="#fff" />
+              <Text style={styles.mapSmallButtonText}>Open in app</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={() => setVisitModalVisible(true)}
+              style={styles.mapSmallButton}
+              onPress={openInMaps}
             >
-              <Ionicons name="calendar-outline" size={17} color="#111" />
-              <Text style={styles.actionBtnText}>Add visit</Text>
+              <Ionicons name="navigate-outline" size={17} color="#fff" />
+              <Text style={styles.mapSmallButtonText}>Google Maps</Text>
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.mapButton} onPress={openInMaps}>
-            <Text style={styles.mapButtonText}>Open in Google Maps</Text>
-          </TouchableOpacity>
+          <View style={styles.quickActionsRow}>
+            <TouchableOpacity
+              style={styles.quickActionBtn}
+              onPress={() => setModalVisible(true)}
+            >
+              <Ionicons name="star-outline" size={18} color="#111" />
+              <Text style={styles.quickActionText}>Rate</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickActionBtn}
+              onPress={() => setVisitModalVisible(true)}
+            >
+              <Ionicons name="calendar-outline" size={18} color="#111" />
+              <Text style={styles.quickActionText}>Visit</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickActionBtn}
+              onPress={() => setAiModalVisible(true)}
+            >
+              <Ionicons name="sparkles-outline" size={18} color="#111" />
+              <Text style={styles.quickActionText}>Ask AI</Text>
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.travelCard}>
             <Text style={styles.travelTitle}>Travel time</Text>
@@ -443,6 +488,10 @@ export default function PlaceDetailsScreen(props) {
         <Ionicons name="chevron-back" size={24} color="#fff" />
       </TouchableOpacity>
 
+      <TouchableOpacity style={styles.fixedCopyBtn} onPress={copyAddress}>
+        <Ionicons name="copy-outline" size={22} color="#fff" />
+      </TouchableOpacity>
+
       <TouchableOpacity style={styles.fixedShareBtn} onPress={sharePlace}>
         <Ionicons name="share-social" size={22} color="#fff" />
       </TouchableOpacity>
@@ -528,6 +577,47 @@ export default function PlaceDetailsScreen(props) {
           </View>
         </View>
       </Modal>
+
+      <Modal visible={aiModalVisible} transparent={true}>
+        <View style={styles.modalBg}>
+          <View style={styles.aiModalBox}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>ASK AI</Text>
+
+              <TouchableOpacity onPress={() => setAiModalVisible(false)}>
+                <Ionicons name="close" size={28} color="#17A9A3" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.aiLabel}>Ask something about this place</Text>
+
+            <TextInput
+              style={styles.aiInput}
+              placeholder="Example: Is this place good for studying?"
+              value={aiQuestion}
+              onChangeText={setAiQuestion}
+              multiline={true}
+            />
+
+            <TouchableOpacity
+              style={styles.confirmVisitBtn}
+              onPress={handleAskAI}
+            >
+              <Text style={styles.confirmVisitText}>Ask</Text>
+            </TouchableOpacity>
+
+            {aiLoading ? (
+              <ActivityIndicator
+                size="small"
+                color="#4F46E5"
+                style={styles.aiLoader}
+              />
+            ) : aiAnswer ? (
+              <Text style={styles.aiAnswer}>{aiAnswer}</Text>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -535,6 +625,7 @@ export default function PlaceDetailsScreen(props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   image: { width: "100%", height: 300 },
+
   fixedBackBtn: {
     position: "absolute",
     top: 50,
@@ -544,6 +635,17 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     zIndex: 20,
   },
+
+  fixedCopyBtn: {
+    position: "absolute",
+    top: 50,
+    right: 75,
+    backgroundColor: "#1FB6AD",
+    padding: 10,
+    borderRadius: 20,
+    zIndex: 20,
+  },
+
   fixedShareBtn: {
     position: "absolute",
     top: 50,
@@ -553,59 +655,82 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     zIndex: 20,
   },
+
   content: { padding: 20 },
+
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
+
   title: { fontSize: 30, fontWeight: "bold", flex: 1, marginRight: 10 },
   heart: { backgroundColor: "#4F46E5", padding: 10, borderRadius: 20 },
   heartSaved: { backgroundColor: "#111" },
+
   text: { fontSize: 16, marginTop: 4 },
+
   googleLink: {
     color: "#4F46E5",
     textDecorationLine: "underline",
     fontWeight: "600",
   },
-  actionGrid: {
+
+  mapActionsRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
     justifyContent: "space-between",
     marginTop: 14,
   },
-  actionBtn: {
+
+  mapSmallButton: {
     width: "48%",
-    backgroundColor: "#ECECEC",
-    paddingVertical: 10,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    marginBottom: 8,
-  },
-  actionBtnText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#111",
-    marginLeft: 5,
-  },
-  mapButton: {
-    marginTop: 4,
     backgroundColor: "#111",
     paddingVertical: 13,
     borderRadius: 22,
     alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
   },
-  mapButtonText: { color: "#fff", fontSize: 15, fontWeight: "600" },
+
+  mapSmallButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+    marginLeft: 6,
+  },
+
+  quickActionsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 12,
+  },
+
+  quickActionBtn: {
+    width: "31%",
+    backgroundColor: "#ECECEC",
+    paddingVertical: 12,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  quickActionText: {
+    marginTop: 4,
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#111",
+  },
+
   travelCard: {
     backgroundColor: "#F4F4F4",
     borderRadius: 22,
     padding: 12,
     marginTop: 14,
   },
+
   travelTitle: { fontSize: 18, fontWeight: "700", marginBottom: 8 },
   travelButtons: { flexDirection: "row" },
+
   travelBtn: {
     flex: 1,
     backgroundColor: "#fff",
@@ -614,18 +739,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginHorizontal: 3,
   },
+
   travelBtnSelected: { backgroundColor: "#1FB6AD" },
   travelBtnText: { fontSize: 13, fontWeight: "600", color: "#111" },
   routeResult: { fontSize: 15, marginTop: 8, fontWeight: "500" },
   routeHint: { fontSize: 14, marginTop: 8, color: "#666" },
+
   section: { fontSize: 22, marginTop: 15, fontWeight: "bold" },
   desc: { marginTop: 5, fontSize: 16, lineHeight: 22 },
+
   galleryHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: 15,
   },
+
   addPhotoBtn: {
     backgroundColor: "#4F46E5",
     width: 36,
@@ -634,7 +763,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+
   gallery: { flexDirection: "row", flexWrap: "wrap", marginTop: 10 },
+
   galleryPhotoBox: {
     width: "30%",
     height: 90,
@@ -645,40 +776,49 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     overflow: "hidden",
   },
+
   galleryPhoto: { width: "100%", height: "100%" },
+
   photoModalBg: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.95)",
     justifyContent: "center",
     alignItems: "center",
   },
+
   closePhotoBtn: { position: "absolute", top: 50, right: 25, zIndex: 10 },
   bigPhoto: { width: "100%", height: "100%", resizeMode: "contain" },
+
   modalBg: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "rgba(0,0,0,0.3)",
   },
+
   modalBox: {
     width: 260,
     backgroundColor: "#fff",
     padding: 20,
     borderRadius: 10,
   },
+
   visitModalBox: {
     width: 310,
     backgroundColor: "#fff",
     padding: 20,
     borderRadius: 18,
   },
+
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
+
   modalTitle: { fontWeight: "bold", fontSize: 16 },
   visitText: { fontSize: 16, marginTop: 18, marginBottom: 12 },
+
   confirmVisitBtn: {
     marginTop: 18,
     backgroundColor: "#111",
@@ -686,12 +826,15 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: "center",
   },
+
   confirmVisitText: { color: "#fff", fontWeight: "600", fontSize: 16 },
+
   rateRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginTop: 20,
   },
+
   circle: {
     width: 40,
     height: 40,
@@ -700,7 +843,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+
   selected: { backgroundColor: "#17A9A3" },
+
   sendBtn: {
     marginTop: 20,
     alignSelf: "center",
@@ -708,5 +853,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
+  },
+
+  aiModalBox: {
+    width: 320,
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 18,
+  },
+
+  aiLabel: {
+    fontSize: 16,
+    marginTop: 16,
+    marginBottom: 10,
+  },
+
+  aiInput: {
+    minHeight: 90,
+    backgroundColor: "#ECECEC",
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    textAlignVertical: "top",
+  },
+
+  aiLoader: {
+    marginTop: 14,
+  },
+
+  aiAnswer: {
+    marginTop: 14,
+    fontSize: 15,
+    lineHeight: 21,
+    color: "#111",
   },
 });
