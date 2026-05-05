@@ -31,7 +31,7 @@ export default function SignUpScreen({ navigation }) {
 
   const handleSignUp = async () => {
     if (!email || !password) {
-      Alert.alert("Error", "Please fill in all fields.");
+      Alert.alert("Sign up failed", "Please fill in all fields.");
       return;
     }
 

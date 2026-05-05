@@ -35,7 +35,7 @@ export default function SignInScreen({ navigation }) {
 
   const handleSignIn = async () => {
     if (!email || !password) {
-      Alert.alert("Error", "Please enter email and password.");
+      Alert.alert("Sign in failed", "Please enter email and password.");
       return;
     }
 
@@ -48,7 +48,7 @@ export default function SignInScreen({ navigation }) {
 
   const handleResetPassword = async () => {
     if (!email) {
-      Alert.alert("Error", "Please enter your email first.");
+      Alert.alert("Sign in failed", "Please enter your email first.");
       return;
     }
 
@@ -56,7 +56,7 @@ export default function SignInScreen({ navigation }) {
       await sendPasswordResetEmail(auth, email);
       Alert.alert("Success", "Check your email to reset your password.");
     } catch (error) {
-      Alert.alert("Error", error.message);
+      Alert.alert("Reset Password Failed", error.message);
     }
   };
 

@@ -119,7 +119,7 @@ export default function PlaceDetailsScreen(props) {
         await uploadPlacePhoto(place.id, result.assets[0].uri);
       }
     } catch (error) {
-      Alert.alert("Error", "Could not upload photo.");
+      Alert.alert("Upload Photo Failed", "Could not upload photo.");
     }
   };
 
@@ -149,7 +149,7 @@ export default function PlaceDetailsScreen(props) {
 
   const handleSendRating = async () => {
     if (selectedRating === 0) {
-      Alert.alert("Error", "Choose a rating first");
+      Alert.alert("Save Rating Failed", "Choose a rating first");
       return;
     }
 
@@ -160,7 +160,7 @@ export default function PlaceDetailsScreen(props) {
       setModalVisible(false);
       setSelectedRating(0);
     } catch (error) {
-      Alert.alert("Error", "Could not save rating");
+      Alert.alert("Save Rating Failed", "Could not save rating");
     }
   };
 
@@ -191,19 +191,19 @@ export default function PlaceDetailsScreen(props) {
         message: `Check out this place: ${place.name}\n📍 ${place.address}\nhttps://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}`,
       });
     } catch (error) {
-      Alert.alert("Error", "Could not share this place.");
+      Alert.alert("Share Failed", "Could not share this place.");
     }
   };
 
   const copyAddress = async () => {
     if (!place.address || place.address === "Address not available") {
-      Alert.alert("Error", "No address available to copy.");
+      Alert.alert("Copy Address Failed", "No address available to copy.");
       return;
     }
 
     await Clipboard.setStringAsync(place.address);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Alert.alert("Copied", "Address copied to clipboard.");
+    Alert.alert("Copy Address Successful", "Address copied to clipboard.");
   };
 
   const addVisitToCalendar = async () => {
@@ -211,7 +211,7 @@ export default function PlaceDetailsScreen(props) {
       const permission = await Calendar.requestCalendarPermissionsAsync();
 
       if (!permission.granted) {
-        Alert.alert("Permission required", "Calendar permission is required.");
+        Alert.alert("Add Visit Failed", "Calendar permission is required.");
         return;
       }
 
@@ -224,7 +224,7 @@ export default function PlaceDetailsScreen(props) {
       );
 
       if (!defaultCalendar) {
-        Alert.alert("Error", "No editable calendar found.");
+        Alert.alert("Add Visit Failed", "No editable calendar found.");
         return;
       }
 
@@ -244,7 +244,7 @@ export default function PlaceDetailsScreen(props) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert("Success", "Visit added to calendar.");
     } catch (error) {
-      Alert.alert("Error", "Could not add visit.");
+      Alert.alert("Add Visit Failed", "Could not add visit.");
     }
   };
 
@@ -269,13 +269,13 @@ export default function PlaceDetailsScreen(props) {
       });
 
       if (!data) {
-        Alert.alert("Error", "Could not calculate route.");
+        Alert.alert("Route Calculation Failed", "Could not calculate route.");
         return;
       }
 
       setRouteInfo(data);
     } catch (error) {
-      Alert.alert("Error", "Could not calculate route.");
+      Alert.alert("Route Calculation Failed", "Could not calculate route.");
     } finally {
       setRouteLoading(false);
     }
@@ -285,7 +285,7 @@ export default function PlaceDetailsScreen(props) {
     Keyboard.dismiss();
 
     if (!aiQuestion.trim()) {
-      Alert.alert("Error", "Write a question first.");
+      Alert.alert("Ask AI Failed", "Write a question first.");
       return;
     }
 
@@ -295,13 +295,13 @@ export default function PlaceDetailsScreen(props) {
       const answer = await askAIAboutPlace(place, aiQuestion);
 
       if (!answer) {
-        Alert.alert("Error", "Could not get an AI answer.");
+        Alert.alert("Ask AI Failed", "Could not get an AI answer.");
         return;
       }
 
       setAiAnswer(answer);
     } catch (error) {
-      Alert.alert("Error", "Could not get an AI answer.");
+      Alert.alert("Ask AI Failed", "Could not get an AI answer.");
     } finally {
       setAiLoading(false);
     }

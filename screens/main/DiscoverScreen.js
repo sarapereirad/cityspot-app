@@ -68,7 +68,7 @@ export default function DiscoverScreen(props) {
     } catch (error) {
       setNearbyPlaces([]);
       setErrorMessage("Could not load nearby places.");
-      Alert.alert("Error", "Could not load nearby places.");
+      Alert.alert("Load Nearby Places Failed", "Could not load nearby places.");
     } finally {
       setLoading(false);
     }

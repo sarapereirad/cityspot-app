@@ -92,7 +92,7 @@ export default function MapScreen(props) {
 
       setPlaces(data);
     } catch (error) {
-      Alert.alert("Error", "Could not load map data.");
+      Alert.alert("Load Map Data Failed", "Could not load map data.");
     } finally {
       setLoading(false);
     }
@@ -123,7 +123,7 @@ export default function MapScreen(props) {
         mapRef.current.animateToRegion(newRegion, 800);
       }
     } catch (error) {
-      Alert.alert("Error", "Could not get current location.");
+      Alert.alert("Locate Me Failed", "Could not get current location.");
     }
   };
 

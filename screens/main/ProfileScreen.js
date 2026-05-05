@@ -56,7 +56,7 @@ export default function ProfileScreen() {
         setPhotoUri(userData.photoUri || "");
       }
     } catch (error) {
-      Alert.alert("Error", "Could not load profile.");
+      Alert.alert("Load Profile Failed", "Could not load profile.");
     }
   };
 
@@ -103,7 +103,7 @@ export default function ProfileScreen() {
       await loadProfile();
       Alert.alert("Success", "Profile updated.");
     } catch (error) {
-      Alert.alert("Error", "Could not save profile.");
+      Alert.alert("Save Profile Failed", "Could not save profile.");
     }
   };
 
@@ -111,7 +111,7 @@ export default function ProfileScreen() {
     try {
       await logoutUser();
     } catch (error) {
-      Alert.alert("Error", "Could not log out.");
+      Alert.alert("Logout Failed", "Could not log out.");
     }
   };
 

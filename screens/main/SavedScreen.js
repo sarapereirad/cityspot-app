@@ -86,7 +86,10 @@ export default function SavedScreen(props) {
 
       setSavedPlaces(updatedData);
     } catch (error) {
-      Alert.alert("Error", "Could not update saved places distance.");
+      Alert.alert(
+        "Update Distance Failed",
+        "Could not update saved places distance.",
+      );
       setSavedPlaces(data);
     } finally {
       setLoading(false);
