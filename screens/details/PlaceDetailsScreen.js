@@ -2,17 +2,22 @@ import { useEffect, useState } from "react";
 import {
   Alert,
   Image,
+  Linking,
   Modal,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Share,
-  Linking,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImagePicker from "expo-image-picker";
+import * as Haptics from "expo-haptics";
+import * as Clipboard from "expo-clipboard";
+import * as Calendar from "expo-calendar";
+import DateTimePicker from "@react-native-community/datetimepicker";
+
 import {
   listenSavedPlaces,
   removeSavedPlace,
@@ -27,7 +32,6 @@ import {
   listenPlacePhotos,
   uploadPlacePhoto,
 } from "../../services/galleryService";
-import * as Haptics from "expo-haptics";
 
 export default function PlaceDetailsScreen(props) {
   const place = props.route.params ? props.route.params.place : null;
@@ -36,9 +40,11 @@ export default function PlaceDetailsScreen(props) {
   const [ratings, setRatings] = useState([]);
   const [averageRating, setAverageRating] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
+  const [visitModalVisible, setVisitModalVisible] = useState(false);
   const [selectedRating, setSelectedRating] = useState(0);
   const [galleryPhotos, setGalleryPhotos] = useState([]);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   useEffect(() => {
     const unsubscribe = listenSavedPlaces(setSavedPlaces);
@@ -46,18 +52,14 @@ export default function PlaceDetailsScreen(props) {
   }, []);
 
   useEffect(() => {
-    if (!place) {
-      return;
-    }
+    if (!place) return;
 
     const unsubscribe = getPlaceRatings(place.id, setRatings);
     return unsubscribe;
   }, []);
 
   useEffect(() => {
-    if (!place) {
-      return;
-    }
+    if (!place) return;
 
     const unsubscribe = listenPlacePhotos(place.id, setGalleryPhotos);
     return unsubscribe;
@@ -180,6 +182,59 @@ export default function PlaceDetailsScreen(props) {
     }
   };
 
+  const copyAddress = async () => {
+    if (!place.address || place.address === "Address not available") {
+      Alert.alert("Error", "No address available to copy.");
+      return;
+    }
+
+    await Clipboard.setStringAsync(place.address);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Alert.alert("Copied", "Address copied to clipboard.");
+  };
+
+  const addVisitToCalendar = async () => {
+    try {
+      const permission = await Calendar.requestCalendarPermissionsAsync();
+
+      if (!permission.granted) {
+        Alert.alert("Permission required", "Calendar permission is required.");
+        return;
+      }
+
+      const calendars = await Calendar.getCalendarsAsync(
+        Calendar.EntityTypes.EVENT,
+      );
+
+      const defaultCalendar = calendars.find(
+        (calendar) => calendar.allowsModifications,
+      );
+
+      if (!defaultCalendar) {
+        Alert.alert("Error", "No editable calendar found.");
+        return;
+      }
+
+      const endDate = new Date(selectedDate);
+      endDate.setHours(endDate.getHours() + 1);
+
+      await Calendar.createEventAsync(defaultCalendar.id, {
+        title: `Visit ${place.name}`,
+        location: place.address || "",
+        notes: `Place category: ${place.category}`,
+        startDate: selectedDate,
+        endDate: endDate,
+        timeZone: "Europe/Zurich",
+      });
+
+      setVisitModalVisible(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert("Success", "Visit added to calendar.");
+    } catch (error) {
+      Alert.alert("Error", "Could not add visit.");
+    }
+  };
+
   if (!place) {
     return (
       <View style={styles.container}>
@@ -221,25 +276,26 @@ export default function PlaceDetailsScreen(props) {
           <Text style={styles.text}>
             ⭐ {averageRating.toFixed(1)} / 5 ({ratings.length})
           </Text>
+
           <Text style={styles.text}>
             {place.address && place.address.trim() !== ""
               ? place.address
               : "Address not available"}
           </Text>
+
           <Text style={styles.text}>{place.distance}</Text>
           <Text style={styles.text}>Category : {place.category}</Text>
-          <Text style={styles.text}>
-            {place.hours ? (
-              <Text style={styles.text}>{place.hours}</Text>
-            ) : (
-              <Text style={styles.text}>
-                Hours not available –{" "}
-                <Text style={styles.googleLink} onPress={searchOnGoogle}>
-                  check on Google
-                </Text>
+
+          {place.hours ? (
+            <Text style={styles.text}>{place.hours}</Text>
+          ) : (
+            <Text style={styles.text}>
+              Hours not available –{" "}
+              <Text style={styles.googleLink} onPress={searchOnGoogle}>
+                check on Google
               </Text>
-            )}
-          </Text>
+            </Text>
+          )}
 
           <View style={styles.buttons}>
             <TouchableOpacity
@@ -257,6 +313,21 @@ export default function PlaceDetailsScreen(props) {
           <TouchableOpacity style={styles.mapButton} onPress={openInMaps}>
             <Text style={styles.mapButtonText}>Open in Google Maps</Text>
           </TouchableOpacity>
+
+          <View style={styles.extraButtons}>
+            <TouchableOpacity style={styles.extraBtn} onPress={copyAddress}>
+              <Ionicons name="copy-outline" size={18} color="#111" />
+              <Text style={styles.extraBtnText}>Copy address</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.extraBtn}
+              onPress={() => setVisitModalVisible(true)}
+            >
+              <Ionicons name="calendar-outline" size={18} color="#111" />
+              <Text style={styles.extraBtnText}>Add visit to calendar</Text>
+            </TouchableOpacity>
+          </View>
 
           <Text style={styles.section}>Description</Text>
           <Text style={styles.desc}>{getDescription()}</Text>
@@ -289,6 +360,40 @@ export default function PlaceDetailsScreen(props) {
           </View>
         </View>
       </ScrollView>
+
+      <Modal visible={visitModalVisible} transparent={true}>
+        <View style={styles.modalBg}>
+          <View style={styles.visitModalBox}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>PLAN A VISIT</Text>
+
+              <TouchableOpacity onPress={() => setVisitModalVisible(false)}>
+                <Ionicons name="close" size={28} color="#17A9A3" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.visitText}>Choose date and time</Text>
+
+            <DateTimePicker
+              value={selectedDate}
+              mode="datetime"
+              display="default"
+              onChange={(event, date) => {
+                if (date) {
+                  setSelectedDate(date);
+                }
+              }}
+            />
+
+            <TouchableOpacity
+              style={styles.confirmVisitBtn}
+              onPress={addVisitToCalendar}
+            >
+              <Text style={styles.confirmVisitText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={selectedPhoto !== null} transparent={true}>
         <View style={styles.photoModalBg}>
@@ -358,6 +463,14 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 20,
   },
+  shareBtn: {
+    position: "absolute",
+    top: 50,
+    right: 20,
+    backgroundColor: "#1FB6AD",
+    padding: 10,
+    borderRadius: 20,
+  },
   content: {
     padding: 20,
   },
@@ -380,14 +493,14 @@ const styles = StyleSheet.create({
   heartSaved: {
     backgroundColor: "#111",
   },
+  text: {
+    fontSize: 16,
+    marginTop: 4,
+  },
   googleLink: {
     color: "#4F46E5",
     textDecorationLine: "underline",
     fontWeight: "600",
-  },
-  text: {
-    fontSize: 16,
-    marginTop: 4,
   },
   buttons: {
     flexDirection: "row",
@@ -406,6 +519,36 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#111",
+  },
+  mapButton: {
+    marginTop: 16,
+    backgroundColor: "#111",
+    paddingVertical: 14,
+    borderRadius: 20,
+    alignItems: "center",
+  },
+  mapButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  extraButtons: {
+    marginTop: 10,
+  },
+  extraBtn: {
+    backgroundColor: "#ECECEC",
+    borderRadius: 20,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    marginBottom: 8,
+  },
+  extraBtnText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#111",
+    marginLeft: 6,
   },
   section: {
     fontSize: 22,
@@ -479,6 +622,12 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 10,
   },
+  visitModalBox: {
+    width: 310,
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 18,
+  },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -486,6 +635,23 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontWeight: "bold",
+    fontSize: 16,
+  },
+  visitText: {
+    fontSize: 16,
+    marginTop: 18,
+    marginBottom: 12,
+  },
+  confirmVisitBtn: {
+    marginTop: 18,
+    backgroundColor: "#111",
+    paddingVertical: 12,
+    borderRadius: 20,
+    alignItems: "center",
+  },
+  confirmVisitText: {
+    color: "#fff",
+    fontWeight: "600",
     fontSize: 16,
   },
   rateRow: {
@@ -510,27 +676,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#ddd",
     paddingHorizontal: 20,
     paddingVertical: 10,
-    borderRadius: 20,
-  },
-  mapButton: {
-    marginTop: 16,
-    backgroundColor: "#111",
-    paddingVertical: 14,
-    borderRadius: 20,
-    alignItems: "center",
-  },
-
-  mapButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  shareBtn: {
-    position: "absolute",
-    top: 50,
-    right: 20,
-    backgroundColor: "#1FB6AD",
-    padding: 10,
     borderRadius: 20,
   },
 });
