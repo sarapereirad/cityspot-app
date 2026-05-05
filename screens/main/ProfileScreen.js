@@ -22,7 +22,6 @@ import { listenSavedPlaces } from "../../services/savedService";
 import { getSearches } from "../../services/searchService";
 
 export default function ProfileScreen() {
-  const [profile, setProfile] = useState(null);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [photoUri, setPhotoUri] = useState("");
@@ -48,7 +47,6 @@ export default function ProfileScreen() {
       if (!auth.currentUser) return;
 
       const userData = await getUserProfile(auth.currentUser.uid);
-      setProfile(userData);
 
       if (userData) {
         setFirstName(userData.firstName || "");
@@ -142,7 +140,7 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.fieldRow}>
-          <Text style={styles.label}>Name :</Text>
+          <Text style={styles.label}>Name:</Text>
 
           {editing ? (
             <TextInput
@@ -159,7 +157,7 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.fieldRow}>
-          <Text style={styles.label}>Surname :</Text>
+          <Text style={styles.label}>Surname:</Text>
 
           {editing ? (
             <TextInput
@@ -176,18 +174,16 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.fieldRow}>
-          <Text style={styles.label}>Email :</Text>
+          <Text style={styles.label}>Email:</Text>
           <Text style={styles.value}>{auth.currentUser?.email}</Text>
         </View>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.infoTitle}>
-          Saved Places : {savedPlaces.length}
-        </Text>
+        <Text style={styles.infoTitle}>Saved Places: {savedPlaces.length}</Text>
 
         <Text style={[styles.infoTitle, { marginTop: 20 }]}>
-          Last searches :
+          Last searches:
         </Text>
 
         {lastSearches.length === 0 ? (

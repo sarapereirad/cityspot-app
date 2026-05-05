@@ -56,7 +56,7 @@ export default function SignInScreen({ navigation }) {
       await sendPasswordResetEmail(auth, email);
       Alert.alert("Success", "Check your email to reset your password.");
     } catch (error) {
-      Alert.alert("Reset Password Failed", error.message);
+      Alert.alert("Reset Password Failed", getAuthErrorMessage(error.code));
     }
   };
 

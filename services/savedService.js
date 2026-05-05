@@ -1,3 +1,5 @@
+// Firebase Firestore documentation:
+// https://firebase.google.com/docs/firestore
 import {
   collection,
   deleteDoc,
@@ -24,7 +26,7 @@ export const savePlace = async (place) => {
 export const removeSavedPlace = async (placeId) => {
   const user = auth.currentUser;
 
-  if (!user) {
+  if (!user || !placeId) {
     return;
   }
 

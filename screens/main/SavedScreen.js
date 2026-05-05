@@ -114,7 +114,13 @@ export default function SavedScreen(props) {
               onPress={() =>
                 props.navigation.navigate("PlaceDetails", { place: place })
               }
-              onFavoritePress={() => removeSavedPlace(place.id)}
+              onFavoritePress={async () => {
+                try {
+                  await removeSavedPlace(place.id);
+                } catch (error) {
+                  Alert.alert("Save failed", "Could not update saved place.");
+                }
+              }}
             />
           ))}
         </ScrollView>

@@ -1,3 +1,6 @@
+// Firebase Authentication and Firestore documentation:
+// https://firebase.google.com/docs/auth
+// https://firebase.google.com/docs/firestore
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -34,6 +37,10 @@ export const logoutUser = async () => {
 };
 
 export const getUserProfile = async (uid) => {
+  if (!uid) {
+    return null;
+  }
+
   const docRef = doc(db, "users", uid);
   const docSnap = await getDoc(docRef);
 
@@ -45,6 +52,10 @@ export const getUserProfile = async (uid) => {
 };
 
 export const updateUserProfile = async (uid, profileData) => {
+  if (!uid || !profileData) {
+    return;
+  }
+
   const docRef = doc(db, "users", uid);
   await updateDoc(docRef, profileData);
 };

@@ -1,3 +1,6 @@
+// Firebase configuration
+// Source: Firebase documentation
+// https://firebase.google.com/docs/web/setup
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";

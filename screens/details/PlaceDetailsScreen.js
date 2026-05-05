@@ -23,7 +23,6 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { getUserLocation } from "../../services/locationService";
 import { getRouteInfo } from "../../services/routeService";
 import { askAIAboutPlace } from "../../services/aiService";
-
 import {
   listenSavedPlaces,
   removeSavedPlace,
@@ -69,14 +68,14 @@ export default function PlaceDetailsScreen(props) {
 
     const unsubscribe = getPlaceRatings(place.id, setRatings);
     return unsubscribe;
-  }, []);
+  }, [place]);
 
   useEffect(() => {
     if (!place) return;
 
     const unsubscribe = listenPlacePhotos(place.id, setGalleryPhotos);
     return unsubscribe;
-  }, []);
+  }, [place]);
 
   useEffect(() => {
     setAverageRating(calculateAverageRating(ratings));
@@ -149,7 +148,7 @@ export default function PlaceDetailsScreen(props) {
 
   const handleSendRating = async () => {
     if (selectedRating === 0) {
-      Alert.alert("Save Rating Failed", "Choose a rating first");
+      Alert.alert("Rating Failed", "Choose a rating first");
       return;
     }
 
@@ -160,7 +159,7 @@ export default function PlaceDetailsScreen(props) {
       setModalVisible(false);
       setSelectedRating(0);
     } catch (error) {
-      Alert.alert("Save Rating Failed", "Could not save rating");
+      Alert.alert("Rating Failed", "Could not save rating");
     }
   };
 

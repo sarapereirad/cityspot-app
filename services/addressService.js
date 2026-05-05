@@ -1,7 +1,13 @@
+// OpenCage Geocoding API documentation:
+// https://opencagedata.com/api
 const API_KEY = "18d38fbc2d6448a2b1c5c8621743799d";
 
 export const getAddressFromCoordinates = async (lat, lng) => {
   try {
+    if (!lat || !lng) {
+      return null;
+    }
+
     const response = await fetch(
       `https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lng}&key=${API_KEY}&language=en&limit=1`,
     );

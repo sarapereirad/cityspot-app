@@ -1,3 +1,5 @@
+// Firebase Firestore documentation:
+// https://firebase.google.com/docs/firestore
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { auth, db } from "../firebaseConfig";
 
@@ -11,6 +13,10 @@ export const saveSearch = async (text) => {
 
     const userRef = doc(db, "users", user.uid);
     const userSnapshot = await getDoc(userRef);
+
+    if (!userSnapshot.exists()) {
+      return;
+    }
 
     const userData = userSnapshot.data();
     let searches = userData?.lastSearches || [];

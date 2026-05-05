@@ -1,3 +1,6 @@
+// Firebase Storage and Firestore documentation:
+// https://firebase.google.com/docs/storage
+// https://firebase.google.com/docs/firestore
 import {
   addDoc,
   collection,
@@ -18,7 +21,7 @@ export const uploadPlacePhoto = async (placeId, imageUri) => {
   const response = await fetch(imageUri);
   const blob = await response.blob();
 
-  const photoName = new Date().getTime().toString();
+  const photoName = new Date().getTime().toString() + ".jpg";
   const storageRef = ref(
     storage,
     "placeGalleries/" + String(placeId) + "/" + photoName,

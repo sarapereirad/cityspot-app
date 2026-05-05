@@ -45,6 +45,10 @@ export default function MapScreen(props) {
   };
 
   const selectPlace = (place) => {
+    if (!place || !place.lat || !place.lng) {
+      return;
+    }
+
     setSelectedPlace(place);
     animateMarker();
 

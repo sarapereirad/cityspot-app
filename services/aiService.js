@@ -1,8 +1,10 @@
+// OpenAI API (Responses endpoint):
+// https://platform.openai.com/docs/api-reference/responses
 const API_KEY = "";
 
 export const askAIAboutPlace = async (place, question) => {
   try {
-    if (!question.trim()) {
+    if (!question.trim() || !API_KEY) {
       return null;
     }
 
@@ -32,6 +34,10 @@ Do not invent exact facts if they are not provided.
         `,
       }),
     });
+
+    if (!response.ok) {
+      return null;
+    }
 
     const data = await response.json();
 

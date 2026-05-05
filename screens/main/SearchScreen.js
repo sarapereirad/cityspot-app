@@ -58,10 +58,14 @@ export default function SearchScreen(props) {
   };
 
   const toggleSavedPlace = async (place) => {
-    if (isPlaceSaved(place.id)) {
-      await removeSavedPlace(place.id);
-    } else {
-      await savePlace(place);
+    try {
+      if (isPlaceSaved(place.id)) {
+        await removeSavedPlace(place.id);
+      } else {
+        await savePlace(place);
+      }
+    } catch (error) {
+      Alert.alert("Save failed", "Could not update saved place.");
     }
   };
 
@@ -201,7 +205,9 @@ export default function SearchScreen(props) {
             />
           ) : errorMessage ? (
             <Text style={styles.feedbackText}>{errorMessage}</Text>
-          ) : places.length === 0 ? null : (
+          ) : places.length === 0 ? (
+            <Text style={styles.feedbackText}>No places found.</Text>
+          ) : (
             places.map((place) => (
               <PlaceCard
                 key={place.id}

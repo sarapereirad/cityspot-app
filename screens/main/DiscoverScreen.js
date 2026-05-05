@@ -39,10 +39,14 @@ export default function DiscoverScreen(props) {
   };
 
   const toggleSavedPlace = async (place) => {
-    if (isPlaceSaved(place.id)) {
-      await removeSavedPlace(place.id);
-    } else {
-      await savePlace(place);
+    try {
+      if (isPlaceSaved(place.id)) {
+        await removeSavedPlace(place.id);
+      } else {
+        await savePlace(place);
+      }
+    } catch (error) {
+      Alert.alert("Save failed", "Could not update saved place.");
     }
   };
 

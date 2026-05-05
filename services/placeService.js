@@ -1,3 +1,5 @@
+// OpenStreetMap Overpass API documentation:
+// https://wiki.openstreetmap.org/wiki/Overpass_API
 import { getAddressFromCoordinates } from "./addressService";
 
 const categoryImages = {
@@ -33,10 +35,10 @@ const getDistanceInMeters = (lat1, lon1, lat2, lon2) => {
 
 const formatDistance = (meters) => {
   if (meters < 1000) {
-    return meters + "m away";
+    return meters + " m away";
   }
 
-  return (meters / 1000).toFixed(1) + "km away";
+  return (meters / 1000).toFixed(1) + " km away";
 };
 
 const formatAddress = (tags) => {
@@ -50,8 +52,6 @@ const formatAddress = (tags) => {
     tags["addr:village"] ||
     tags["addr:municipality"] ||
     tags["addr:place"];
-
-  const name = tags.name;
 
   let address = "";
 
@@ -257,6 +257,10 @@ const mapPlace = async (item, latitude, longitude) => {
 };
 
 export const fetchNearbyPlaces = async (latitude, longitude, radius = 1000) => {
+  if (!latitude || !longitude) {
+    return [];
+  }
+
   const filters = [
     '["amenity"~"bar|cafe|pub|restaurant|fast_food|food_court|library|coworking_space"]',
     '["shop"]',
@@ -294,6 +298,10 @@ export const fetchPlacesByCategoryNearby = async ({
   longitude,
   radius = 5000,
 }) => {
+  if (!category || !latitude || !longitude) {
+    return [];
+  }
+
   const filters = getCategoryFilters(category);
 
   const query = `
@@ -327,6 +335,10 @@ export const fetchPlacesForMapNearby = async (
   longitude,
   radius = 2000,
 ) => {
+  if (!latitude || !longitude) {
+    return [];
+  }
+
   const filters = [
     '["amenity"~"bar|cafe|pub|restaurant|fast_food|food_court|library|coworking_space"]',
     '["shop"]',
@@ -361,6 +373,10 @@ export const fetchPlacesByTextNearby = async ({
   longitude,
   radius = 2000,
 }) => {
+  if (!text.trim() || !latitude || !longitude) {
+    return [];
+  }
+
   const filters = [
     '["amenity"~"bar|cafe|pub|restaurant|fast_food|food_court|library|coworking_space"]',
     '["shop"]',

@@ -1,13 +1,7 @@
+// OpenRouteService Directions API documentation:
+// https://openrouteservice.org/dev/#/api-docs/v2/directions
 const API_KEY =
   "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjE2YTg3NDU3ZWQ4NDRmOGU4YjQ4YzhjNjVjOTNiNzQ0IiwiaCI6Im11cm11cjY0In0=";
-
-const formatDistance = (meters) => {
-  if (meters < 1000) {
-    return Math.round(meters) + " m";
-  }
-
-  return (meters / 1000).toFixed(1) + " km";
-};
 
 const formatDuration = (seconds) => {
   const minutes = Math.round(seconds / 60);
@@ -27,6 +21,9 @@ export const getRouteInfo = async ({
   mode,
 }) => {
   try {
+    if (!userLat || !userLng || !placeLat || !placeLng || !mode || !API_KEY) {
+      return null;
+    }
     const response = await fetch(
       `https://api.openrouteservice.org/v2/directions/${mode}`,
       {

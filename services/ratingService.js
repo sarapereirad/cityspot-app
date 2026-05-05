@@ -1,3 +1,5 @@
+// Firebase Firestore documentation:
+// https://firebase.google.com/docs/firestore
 import {
   addDoc,
   collection,
@@ -8,6 +10,10 @@ import {
 import { db } from "../firebaseConfig";
 
 export const savePlaceRating = async (placeId, rating) => {
+  if (!placeId || !rating) {
+    return;
+  }
+
   await addDoc(collection(db, "ratings"), {
     placeId: placeId,
     rating: rating,
@@ -16,6 +22,10 @@ export const savePlaceRating = async (placeId, rating) => {
 };
 
 export const getPlaceRatings = (placeId, setRatings) => {
+  if (!placeId) {
+    setRatings([]);
+    return () => {};
+  }
   const q = query(collection(db, "ratings"), where("placeId", "==", placeId));
 
   return onSnapshot(q, (snapshot) => {
@@ -30,5 +40,5 @@ export const calculateAverageRating = (ratings) => {
   }
 
   const sum = ratings.reduce((total, item) => total + item, 0);
-  return sum / ratings.length;
+  return Number((sum / ratings.length).toFixed(1));
 };
