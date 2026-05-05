@@ -1,4 +1,3 @@
-// screens/auth/SignUpScreen.js
 import { useState } from "react";
 import {
   Alert,

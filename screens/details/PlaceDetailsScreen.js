@@ -17,6 +17,8 @@ import * as Haptics from "expo-haptics";
 import * as Clipboard from "expo-clipboard";
 import * as Calendar from "expo-calendar";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { getUserLocation } from "../../services/locationService";
+import { getRouteInfo } from "../../services/routeService";
 
 import {
   listenSavedPlaces,
@@ -45,6 +47,9 @@ export default function PlaceDetailsScreen(props) {
   const [galleryPhotos, setGalleryPhotos] = useState([]);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedTravelMode, setSelectedTravelMode] = useState("");
+  const [routeInfo, setRouteInfo] = useState(null);
+  const [routeLoading, setRouteLoading] = useState(false);
 
   useEffect(() => {
     const unsubscribe = listenSavedPlaces(setSavedPlaces);
@@ -235,6 +240,39 @@ export default function PlaceDetailsScreen(props) {
     }
   };
 
+  const loadRouteInfo = async (mode) => {
+    try {
+      setRouteLoading(true);
+      setSelectedTravelMode(mode);
+
+      const location = await getUserLocation();
+
+      if (!location) {
+        Alert.alert("Permission denied", "Location is required.");
+        return;
+      }
+
+      const data = await getRouteInfo({
+        userLat: location.latitude,
+        userLng: location.longitude,
+        placeLat: place.lat,
+        placeLng: place.lng,
+        mode: mode,
+      });
+
+      if (!data) {
+        Alert.alert("Error", "Could not calculate route.");
+        return;
+      }
+
+      setRouteInfo(data);
+    } catch (error) {
+      Alert.alert("Error", "Could not calculate route.");
+    } finally {
+      setRouteLoading(false);
+    }
+  };
+
   if (!place) {
     return (
       <View style={styles.container}>
@@ -246,20 +284,7 @@ export default function PlaceDetailsScreen(props) {
   return (
     <View style={styles.container}>
       <ScrollView>
-        <View>
-          <Image source={{ uri: place.image }} style={styles.image} />
-
-          <TouchableOpacity
-            style={styles.backBtn}
-            onPress={() => props.navigation.goBack()}
-          >
-            <Ionicons name="chevron-back" size={24} color="#fff" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.shareBtn} onPress={sharePlace}>
-            <Ionicons name="share-social" size={22} color="#fff" />
-          </TouchableOpacity>
-        </View>
+        <Image source={{ uri: place.image }} style={styles.image} />
 
         <View style={styles.content}>
           <View style={styles.header}>
@@ -297,16 +322,29 @@ export default function PlaceDetailsScreen(props) {
             </Text>
           )}
 
-          <View style={styles.buttons}>
+          <View style={styles.actionGrid}>
             <TouchableOpacity
-              style={styles.btn}
+              style={styles.actionBtn}
               onPress={() => setModalVisible(true)}
             >
-              <Text style={styles.btnText}>Rate</Text>
+              <Text style={styles.actionBtnText}>Rate</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.btn} onPress={openMap}>
-              <Text style={styles.btnText}>Open in Map</Text>
+            <TouchableOpacity style={styles.actionBtn} onPress={openMap}>
+              <Text style={styles.actionBtnText}>Open in Map</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionBtn} onPress={copyAddress}>
+              <Ionicons name="copy-outline" size={17} color="#111" />
+              <Text style={styles.actionBtnText}>Copy address</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => setVisitModalVisible(true)}
+            >
+              <Ionicons name="calendar-outline" size={17} color="#111" />
+              <Text style={styles.actionBtnText}>Add visit</Text>
             </TouchableOpacity>
           </View>
 
@@ -314,19 +352,56 @@ export default function PlaceDetailsScreen(props) {
             <Text style={styles.mapButtonText}>Open in Google Maps</Text>
           </TouchableOpacity>
 
-          <View style={styles.extraButtons}>
-            <TouchableOpacity style={styles.extraBtn} onPress={copyAddress}>
-              <Ionicons name="copy-outline" size={18} color="#111" />
-              <Text style={styles.extraBtnText}>Copy address</Text>
-            </TouchableOpacity>
+          <View style={styles.travelCard}>
+            <Text style={styles.travelTitle}>Travel time</Text>
 
-            <TouchableOpacity
-              style={styles.extraBtn}
-              onPress={() => setVisitModalVisible(true)}
-            >
-              <Ionicons name="calendar-outline" size={18} color="#111" />
-              <Text style={styles.extraBtnText}>Add visit to calendar</Text>
-            </TouchableOpacity>
+            <View style={styles.travelButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.travelBtn,
+                  selectedTravelMode === "foot-walking"
+                    ? styles.travelBtnSelected
+                    : null,
+                ]}
+                onPress={() => loadRouteInfo("foot-walking")}
+              >
+                <Text style={styles.travelBtnText}>Walk</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.travelBtn,
+                  selectedTravelMode === "cycling-regular"
+                    ? styles.travelBtnSelected
+                    : null,
+                ]}
+                onPress={() => loadRouteInfo("cycling-regular")}
+              >
+                <Text style={styles.travelBtnText}>Bike</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.travelBtn,
+                  selectedTravelMode === "driving-car"
+                    ? styles.travelBtnSelected
+                    : null,
+                ]}
+                onPress={() => loadRouteInfo("driving-car")}
+              >
+                <Text style={styles.travelBtnText}>Car</Text>
+              </TouchableOpacity>
+            </View>
+
+            {routeLoading ? (
+              <Text style={styles.routeResult}>Calculating time...</Text>
+            ) : routeInfo ? (
+              <Text style={styles.routeResult}>
+                Estimated time: {routeInfo.duration}
+              </Text>
+            ) : (
+              <Text style={styles.routeHint}>Choose a travel mode.</Text>
+            )}
           </View>
 
           <Text style={styles.section}>Description</Text>
@@ -360,6 +435,17 @@ export default function PlaceDetailsScreen(props) {
           </View>
         </View>
       </ScrollView>
+
+      <TouchableOpacity
+        style={styles.fixedBackBtn}
+        onPress={() => props.navigation.goBack()}
+      >
+        <Ionicons name="chevron-back" size={24} color="#fff" />
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.fixedShareBtn} onPress={sharePlace}>
+        <Ionicons name="share-social" size={22} color="#fff" />
+      </TouchableOpacity>
 
       <Modal visible={visitModalVisible} transparent={true}>
         <View style={styles.modalBg}>
@@ -447,119 +533,93 @@ export default function PlaceDetailsScreen(props) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  image: {
-    width: "100%",
-    height: 300,
-  },
-  backBtn: {
+  container: { flex: 1, backgroundColor: "#fff" },
+  image: { width: "100%", height: 300 },
+  fixedBackBtn: {
     position: "absolute",
     top: 50,
     left: 20,
     backgroundColor: "#1FB6AD",
     padding: 10,
     borderRadius: 20,
+    zIndex: 20,
   },
-  shareBtn: {
+  fixedShareBtn: {
     position: "absolute",
     top: 50,
     right: 20,
     backgroundColor: "#1FB6AD",
     padding: 10,
     borderRadius: 20,
+    zIndex: 20,
   },
-  content: {
-    padding: 20,
-  },
+  content: { padding: 20 },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  title: {
-    fontSize: 30,
-    fontWeight: "bold",
-    flex: 1,
-    marginRight: 10,
-  },
-  heart: {
-    backgroundColor: "#4F46E5",
-    padding: 10,
-    borderRadius: 20,
-  },
-  heartSaved: {
-    backgroundColor: "#111",
-  },
-  text: {
-    fontSize: 16,
-    marginTop: 4,
-  },
+  title: { fontSize: 30, fontWeight: "bold", flex: 1, marginRight: 10 },
+  heart: { backgroundColor: "#4F46E5", padding: 10, borderRadius: 20 },
+  heartSaved: { backgroundColor: "#111" },
+  text: { fontSize: 16, marginTop: 4 },
   googleLink: {
     color: "#4F46E5",
     textDecorationLine: "underline",
     fontWeight: "600",
   },
-  buttons: {
+  actionGrid: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
-    marginTop: 16,
+    marginTop: 14,
   },
-  btn: {
-    flex: 1,
-    backgroundColor: "#ddd",
-    paddingVertical: 12,
-    borderRadius: 20,
-    marginHorizontal: 6,
-    alignItems: "center",
-  },
-  btnText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#111",
-  },
-  mapButton: {
-    marginTop: 16,
-    backgroundColor: "#111",
-    paddingVertical: 14,
-    borderRadius: 20,
-    alignItems: "center",
-  },
-  mapButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  extraButtons: {
-    marginTop: 10,
-  },
-  extraBtn: {
+  actionBtn: {
+    width: "48%",
     backgroundColor: "#ECECEC",
-    borderRadius: 20,
-    paddingVertical: 12,
+    paddingVertical: 10,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     marginBottom: 8,
   },
-  extraBtnText: {
-    fontSize: 15,
+  actionBtnText: {
+    fontSize: 14,
     fontWeight: "600",
     color: "#111",
-    marginLeft: 6,
+    marginLeft: 5,
   },
-  section: {
-    fontSize: 22,
-    marginTop: 15,
-    fontWeight: "bold",
+  mapButton: {
+    marginTop: 4,
+    backgroundColor: "#111",
+    paddingVertical: 13,
+    borderRadius: 22,
+    alignItems: "center",
   },
-  desc: {
-    marginTop: 5,
-    fontSize: 16,
-    lineHeight: 22,
+  mapButtonText: { color: "#fff", fontSize: 15, fontWeight: "600" },
+  travelCard: {
+    backgroundColor: "#F4F4F4",
+    borderRadius: 22,
+    padding: 12,
+    marginTop: 14,
   },
+  travelTitle: { fontSize: 18, fontWeight: "700", marginBottom: 8 },
+  travelButtons: { flexDirection: "row" },
+  travelBtn: {
+    flex: 1,
+    backgroundColor: "#fff",
+    paddingVertical: 8,
+    borderRadius: 18,
+    alignItems: "center",
+    marginHorizontal: 3,
+  },
+  travelBtnSelected: { backgroundColor: "#1FB6AD" },
+  travelBtnText: { fontSize: 13, fontWeight: "600", color: "#111" },
+  routeResult: { fontSize: 15, marginTop: 8, fontWeight: "500" },
+  routeHint: { fontSize: 14, marginTop: 8, color: "#666" },
+  section: { fontSize: 22, marginTop: 15, fontWeight: "bold" },
+  desc: { marginTop: 5, fontSize: 16, lineHeight: 22 },
   galleryHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -574,11 +634,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  gallery: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginTop: 10,
-  },
+  gallery: { flexDirection: "row", flexWrap: "wrap", marginTop: 10 },
   galleryPhotoBox: {
     width: "30%",
     height: 90,
@@ -589,27 +645,15 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     overflow: "hidden",
   },
-  galleryPhoto: {
-    width: "100%",
-    height: "100%",
-  },
+  galleryPhoto: { width: "100%", height: "100%" },
   photoModalBg: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.95)",
     justifyContent: "center",
     alignItems: "center",
   },
-  closePhotoBtn: {
-    position: "absolute",
-    top: 50,
-    right: 25,
-    zIndex: 10,
-  },
-  bigPhoto: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "contain",
-  },
+  closePhotoBtn: { position: "absolute", top: 50, right: 25, zIndex: 10 },
+  bigPhoto: { width: "100%", height: "100%", resizeMode: "contain" },
   modalBg: {
     flex: 1,
     justifyContent: "center",
@@ -633,15 +677,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  modalTitle: {
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-  visitText: {
-    fontSize: 16,
-    marginTop: 18,
-    marginBottom: 12,
-  },
+  modalTitle: { fontWeight: "bold", fontSize: 16 },
+  visitText: { fontSize: 16, marginTop: 18, marginBottom: 12 },
   confirmVisitBtn: {
     marginTop: 18,
     backgroundColor: "#111",
@@ -649,11 +686,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: "center",
   },
-  confirmVisitText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 16,
-  },
+  confirmVisitText: { color: "#fff", fontWeight: "600", fontSize: 16 },
   rateRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -667,9 +700,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  selected: {
-    backgroundColor: "#17A9A3",
-  },
+  selected: { backgroundColor: "#17A9A3" },
   sendBtn: {
     marginTop: 20,
     alignSelf: "center",
