@@ -1,6 +1,6 @@
 // OpenCage Geocoding API documentation:
 // https://opencagedata.com/api
-const API_KEY = "18d38fbc2d6448a2b1c5c8621743799d";
+const API_KEY = process.env.EXPO_PUBLIC_OPENCAGE_API_KEY;
 
 export const getAddressFromCoordinates = async (lat, lng) => {
   try {

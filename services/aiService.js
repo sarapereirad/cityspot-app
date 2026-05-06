@@ -1,6 +1,6 @@
 // OpenAI API (Responses endpoint):
 // https://platform.openai.com/docs/api-reference/responses
-const API_KEY = "";
+const API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
 
 export const askAIAboutPlace = async (place, question) => {
   try {
@@ -40,10 +40,6 @@ Do not invent exact facts if they are not provided.
     }
 
     const data = await response.json();
-
-    if (!response.ok) {
-      return null;
-    }
 
     const answer =
       data.output?.[0]?.content?.[0]?.text ||

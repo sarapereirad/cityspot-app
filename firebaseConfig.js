@@ -7,12 +7,12 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBWePnoQL012cpbXOQP-SB8rIBfFA5uhuI",
-  authDomain: "cityspot-211d5.firebaseapp.com",
-  projectId: "cityspot-211d5",
-  storageBucket: "cityspot-211d5.firebasestorage.app",
-  messagingSenderId: "140772304030",
-  appId: "1:140772304030:web:ac6ac871123b5a9480878f",
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
 const app = initializeApp(firebaseConfig);

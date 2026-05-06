@@ -1,7 +1,6 @@
 // OpenRouteService Directions API documentation:
 // https://openrouteservice.org/dev/#/api-docs/v2/directions
-const API_KEY =
-  "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjE2YTg3NDU3ZWQ4NDRmOGU4YjQ4YzhjNjVjOTNiNzQ0IiwiaCI6Im11cm11cjY0In0=";
+const API_KEY = process.env.EXPO_PUBLIC_OPENROUTESERVICE_API_KEY;
 
 const formatDuration = (seconds) => {
   const minutes = Math.round(seconds / 60);
